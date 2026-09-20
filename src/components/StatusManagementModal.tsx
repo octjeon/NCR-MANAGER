@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { X, Camera, ImagePlus, Check, Trash2, AlertCircle, Save } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, Check, Trash2, AlertCircle, Save } from 'lucide-react';
 import { ACTION_PLAN_OPTIONS, ActionPlan, NonconformityRecord } from '../types';
 import { readFileAsDataUrl } from '../utils/imageUtils';
+import { PhotoSourceModal } from './PhotoSourceModal';
 
 interface StatusManagementModalProps {
   record: NonconformityRecord;
@@ -36,14 +37,45 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
   const [specialNotes, setSpecialNotes] = useState(record.specialNotes || '');
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const [targetSlotIndex, setTargetSlotIndex] = useState<number | null>(null);
+  const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
 
   if (!isOpen) return null;
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTriggerSlot = (slotIdx: number) => {
+    setTargetSlotIndex(slotIdx);
+    setShowPhotoSourceModal(true);
+  };
+
+  const handleOpenDirectCamera = (slotIdx?: number) => {
+    if (typeof slotIdx === 'number') {
+      setTargetSlotIndex(slotIdx);
+    } else {
+      const nextIdx = completedPhotos.length < 4 ? completedPhotos.length : null;
+      setTargetSlotIndex(nextIdx);
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
+    }
+  };
+
+  const handleOpenDirectGallery = (slotIdx?: number) => {
+    if (typeof slotIdx === 'number') {
+      setTargetSlotIndex(slotIdx);
+    } else {
+      const nextIdx = completedPhotos.length < 4 ? completedPhotos.length : null;
+      setTargetSlotIndex(nextIdx);
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
+    }
+  };
+
+  const handleCameraUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -61,20 +93,38 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
       console.error(err);
       setErrorMessage('사진 파일을 처리하는 중 오류가 발생했습니다.');
     } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      setTargetSlotIndex(null);
+    }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      const dataUrls = await Promise.all(files.map((f) => readFileAsDataUrl(f)));
+      if (targetSlotIndex !== null && targetSlotIndex < completedPhotos.length) {
+        const next = [...completedPhotos];
+        next[targetSlotIndex] = dataUrls[0];
+        const remaining = dataUrls.slice(1);
+        const combined = [...next, ...remaining].slice(0, 4);
+        setCompletedPhotos(combined);
+      } else {
+        setCompletedPhotos((prev) => [...prev, ...dataUrls].slice(0, 4));
+      }
+      setErrorMessage(null);
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('사진 파일을 처리하는 중 오류가 발생했습니다.');
+    } finally {
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
       setTargetSlotIndex(null);
     }
   };
 
   const handleRemovePhoto = (index: number) => {
     setCompletedPhotos((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleTriggerSlot = (slotIdx: number) => {
-    setTargetSlotIndex(slotIdx);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -327,6 +377,28 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
                   <span className="text-xs text-slate-500">{completedPhotos.length} / 4 등록됨</span>
                 </div>
 
+                {/* Quick Action Selection Buttons: Camera & Gallery */}
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDirectCamera()}
+                    disabled={completedPhotos.length >= 4}
+                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs active:scale-[0.98] transition-all"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    카메라 직접 촬영
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDirectGallery()}
+                    disabled={completedPhotos.length >= 4}
+                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-white hover:bg-slate-50 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 border border-slate-200 text-xs font-bold shadow-xs active:scale-[0.98] transition-all"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                    갤러리에서 선택
+                  </button>
+                </div>
+
                 <div className="grid grid-cols-4 gap-2">
                   {[0, 1, 2, 3].map((slotIdx) => {
                     const photo = completedPhotos[slotIdx];
@@ -365,6 +437,7 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
                           >
                             <Camera className="w-5 h-5 mb-0.5" />
                             <span className="text-[10px] font-medium">슬롯 {slotIdx + 1}</span>
+                            <span className="text-[8px] text-slate-400">카메라/갤러리</span>
                           </button>
                         )}
                       </div>
@@ -372,13 +445,23 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
                   })}
                 </div>
 
-                {/* Hidden input for camera / file */}
+                {/* Hidden Input for Camera Capture */}
                 <input
                   type="file"
-                  ref={fileInputRef}
-                  onChange={handlePhotoUpload}
+                  ref={cameraInputRef}
+                  onChange={handleCameraUpload}
                   accept="image/*"
                   capture="environment"
+                  className="hidden"
+                />
+
+                {/* Hidden Input for Gallery Selection (Multiple allowed) */}
+                <input
+                  type="file"
+                  ref={galleryInputRef}
+                  onChange={handleGalleryUpload}
+                  accept="image/*"
+                  multiple
                   className="hidden"
                 />
               </div>
@@ -417,6 +500,25 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
             </button>
           </div>
         </form>
+
+        {/* Photo Source Selection Bottom Sheet / Modal */}
+        <PhotoSourceModal
+          isOpen={showPhotoSourceModal}
+          onClose={() => {
+            setShowPhotoSourceModal(false);
+            setTargetSlotIndex(null);
+          }}
+          onSelectCamera={() => {
+            setShowPhotoSourceModal(false);
+            handleOpenDirectCamera(targetSlotIndex ?? undefined);
+          }}
+          onSelectGallery={() => {
+            setShowPhotoSourceModal(false);
+            handleOpenDirectGallery(targetSlotIndex ?? undefined);
+          }}
+          slotNumber={targetSlotIndex !== null ? targetSlotIndex + 1 : undefined}
+          title="완료 증거사진 추가 방법"
+        />
       </div>
     </div>
   );

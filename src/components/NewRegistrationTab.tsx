@@ -6,6 +6,7 @@ import {
   Plus,
   Check,
   Camera,
+  Image as ImageIcon,
   Trash2,
   AlertCircle,
   CheckCircle2,
@@ -19,6 +20,7 @@ import {
 import { NonconformityRecord } from '../types';
 import { StorageService } from '../services/storage';
 import { readFileAsDataUrl } from '../utils/imageUtils';
+import { PhotoSourceModal } from './PhotoSourceModal';
 
 interface NewRegistrationTabProps {
   onRecordRegistered: (newRecord: NonconformityRecord) => void;
@@ -89,9 +91,11 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
   const [showAddNcTypeModal, setShowAddNcTypeModal] = useState(false);
   const [newNcTypeName, setNewNcTypeName] = useState('');
 
-  // Photo Input Ref
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  // Photo Input Refs & Modal State
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const [targetPhotoSlot, setTargetPhotoSlot] = useState<number | null>(null);
+  const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
 
   // Step 1 Validation
   const validateStep1 = (): boolean => {
@@ -196,15 +200,37 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     setCurrentStep(1);
   };
 
-  // Photo handlers
+  // Photo handlers: Camera vs Gallery Selection
   const handleTriggerPhotoSlot = (slotIdx: number) => {
     setTargetPhotoSlot(slotIdx);
-    if (photoInputRef.current) {
-      photoInputRef.current.click();
+    setShowPhotoSourceModal(true);
+  };
+
+  const handleOpenDirectCamera = (slotIdx?: number) => {
+    if (typeof slotIdx === 'number') {
+      setTargetPhotoSlot(slotIdx);
+    } else {
+      const nextIdx = photos.length < 4 ? photos.length : null;
+      setTargetPhotoSlot(nextIdx);
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOpenDirectGallery = (slotIdx?: number) => {
+    if (typeof slotIdx === 'number') {
+      setTargetPhotoSlot(slotIdx);
+    } else {
+      const nextIdx = photos.length < 4 ? photos.length : null;
+      setTargetPhotoSlot(nextIdx);
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
+    }
+  };
+
+  const handleCameraFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -222,7 +248,32 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
       console.error(err);
       setErrorMsg('사진을 변환하는 중 오류가 발생했습니다.');
     } finally {
-      if (photoInputRef.current) photoInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      setTargetPhotoSlot(null);
+    }
+  };
+
+  const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      const dataUrls = await Promise.all(files.map((f) => readFileAsDataUrl(f)));
+      if (targetPhotoSlot !== null && targetPhotoSlot < photos.length) {
+        const next = [...photos];
+        next[targetPhotoSlot] = dataUrls[0];
+        const remaining = dataUrls.slice(1);
+        const combined = [...next, ...remaining].slice(0, 4);
+        setPhotos(combined);
+      } else {
+        setPhotos((prev) => [...prev, ...dataUrls].slice(0, 4));
+      }
+      setErrorMsg(null);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('사진을 변환하는 중 오류가 발생했습니다.');
+    } finally {
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
       setTargetPhotoSlot(null);
     }
   };
@@ -643,10 +694,32 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                   부적합 증거사진 등록 <span className="text-red-500">*</span>
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  카메라 촬영 또는 파일 선택 (최소 1장 필수, 최대 4장)
+                  카메라 직접 촬영 또는 갤러리 사진 선택 (최소 1장 필수, 최대 4장)
                 </p>
               </div>
               <span className="text-xs font-bold text-blue-600">{photos.length} / 4장</span>
+            </div>
+
+            {/* Quick Action Selection Buttons: Camera & Gallery */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleOpenDirectCamera()}
+                disabled={photos.length >= 4}
+                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs active:scale-[0.98] transition-all"
+              >
+                <Camera className="w-4 h-4" />
+                카메라 직접 촬영
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenDirectGallery()}
+                disabled={photos.length >= 4}
+                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 border border-slate-200 text-xs font-bold shadow-xs active:scale-[0.98] transition-all"
+              >
+                <ImageIcon className="w-4 h-4 text-indigo-600" />
+                갤러리에서 선택
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
@@ -689,7 +762,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                           <Camera className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         </div>
                         <span className="text-xs font-semibold">슬롯 {slotIdx + 1}</span>
-                        <span className="text-[10px] text-slate-400">촬영/선택</span>
+                        <span className="text-[10px] text-slate-400">카메라/갤러리</span>
                       </button>
                     )}
                   </div>
@@ -697,21 +770,50 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
               })}
             </div>
 
-            {/* Hidden Input for Camera and File Selection */}
+            {/* Hidden Input for Camera Direct Capture */}
             <input
               type="file"
-              ref={photoInputRef}
-              onChange={handleFileChange}
+              ref={cameraInputRef}
+              onChange={handleCameraFileChange}
               accept="image/*"
               capture="environment"
               className="hidden"
             />
 
+            {/* Hidden Input for Gallery / File Selection (Multiple allowed) */}
+            <input
+              type="file"
+              ref={galleryInputRef}
+              onChange={handleGalleryFileChange}
+              accept="image/*"
+              multiple
+              className="hidden"
+            />
+
             <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-blue-900 leading-relaxed">
-              💡 현장에서 카메라 촬영 또는 갤러리의 사진을 선택하면 자동으로 최적화되어 등록됩니다.
+              💡 <strong>카메라 직접 촬영</strong>으로 현장 사진을 즉시 찍거나, <strong>갤러리에서 선택</strong>하여 앨범에 보관된 사진을 편리하게 등록할 수 있습니다.
             </div>
           </div>
         )}
+
+        {/* Photo Source Selection Bottom Sheet / Modal */}
+        <PhotoSourceModal
+          isOpen={showPhotoSourceModal}
+          onClose={() => {
+            setShowPhotoSourceModal(false);
+            setTargetPhotoSlot(null);
+          }}
+          onSelectCamera={() => {
+            setShowPhotoSourceModal(false);
+            handleOpenDirectCamera(targetPhotoSlot ?? undefined);
+          }}
+          onSelectGallery={() => {
+            setShowPhotoSourceModal(false);
+            handleOpenDirectGallery(targetPhotoSlot ?? undefined);
+          }}
+          slotNumber={targetPhotoSlot !== null ? targetPhotoSlot + 1 : undefined}
+          title="부적합 증거사진 추가 방법"
+        />
 
         {/* Wizard Footer Navigation */}
         <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100">
