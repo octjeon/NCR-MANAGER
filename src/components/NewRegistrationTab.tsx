@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Ship,
   Calendar,
@@ -44,6 +44,16 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
   const [ncTypesList, setNcTypesList] = useState<string[]>(() =>
     StorageService.getNonconformityTypes()
   );
+
+  // Subscribe to live master settings from Firebase
+  useEffect(() => {
+    const unsub = StorageService.subscribeMasterSettings((settings) => {
+      setRegistrars(settings.registrars);
+      setInspectionItemsList(settings.inspectionItems);
+      setNcTypesList(settings.nonconformityTypes);
+    });
+    return () => unsub();
+  }, []);
 
   // Form State
   // Step 1

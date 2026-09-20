@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "records": {
+      "title": "Nonconformity Records",
+      "description": "Quality control nonconformity reports for Daehan precision",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shipNo": { "type": "string" },
+        "inspectionDate": { "type": "string" },
+        "inspectionItems": { "type": "array", "items": { "type": "string" } },
+        "registrar": { "type": "string" },
+        "nonconformityTypes": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string" },
+        "assignedManager": { "type": "string" },
+        "forwardedDate": { "type": "string" },
+        "checker": { "type": "string" },
+        "completedDate": { "type": "string" },
+        "detailContent": { "type": "string" },
+        "evidencePhotos": { "type": "array", "items": { "type": "string" } },
+        "completedPhotos": { "type": "array", "items": { "type": "string" } },
+        "causeAnalysis": { "type": "string" },
+        "specialNotes": { "type": "string" },
+        "actionPlan": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "shipNo", "inspectionDate", "status"]
+    },
+    "settings": {
+      "title": "Master Settings",
+      "description": "Configurable dropdown lists like registrars, inspection items, and nonconformity types",
+      "type": "object",
+      "properties": {
+        "registrars": { "type": "array", "items": { "type": "string" } },
+        "inspectionItems": { "type": "array", "items": { "type": "string" } },
+        "nonconformityTypes": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "firestore": {
+    "/records/{recordId}": {
+      "schema": "records",
+      "description": "QC nonconformity record documents"
+    },
+    "/settings/{settingId}": {
+      "schema": "settings",
+      "description": "Master settings documents"
+    }
+  }
+}

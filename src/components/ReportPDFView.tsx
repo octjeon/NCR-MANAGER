@@ -737,6 +737,7 @@ export const ReportPDFView: React.FC<ReportPDFViewProps> = ({
                 letterSpacing: '5px',
                 textIndent: '5px',
                 verticalAlign: 'middle',
+                height: '84px',
               }}
             >
               원 인 파 악
@@ -748,7 +749,7 @@ export const ReportPDFView: React.FC<ReportPDFViewProps> = ({
                 padding: '8px 12px',
                 whiteSpace: 'pre-wrap',
                 verticalAlign: 'top',
-                height: '42px',
+                height: '84px',
               }}
             >
               {record.causeAnalysis || ''}
@@ -767,6 +768,7 @@ export const ReportPDFView: React.FC<ReportPDFViewProps> = ({
                 letterSpacing: '5px',
                 textIndent: '5px',
                 verticalAlign: 'middle',
+                height: '84px',
               }}
             >
               특 이 사 항
@@ -778,7 +780,7 @@ export const ReportPDFView: React.FC<ReportPDFViewProps> = ({
                 padding: '8px 12px',
                 whiteSpace: 'pre-wrap',
                 verticalAlign: 'top',
-                height: '42px',
+                height: '84px',
               }}
             >
               {record.specialNotes || ''}
@@ -826,91 +828,7 @@ export const ReportPDFView: React.FC<ReportPDFViewProps> = ({
             </td>
           </tr>
 
-          {/* Row 12: 재검사결과 / 최종처리 이행 */}
-          <tr>
-            <td
-              style={{
-                backgroundColor: headerBg,
-                border: '1px solid #000000',
-                fontWeight: 'bold',
-                textAlign: 'center',
-                padding: '6px 4px',
-                letterSpacing: '2px',
-                textIndent: '2px',
-                verticalAlign: 'middle',
-              }}
-            >
-              재검사결과
-            </td>
-            <td
-              style={{
-                border: '1px solid #000000',
-                padding: '6px 12px',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '24px',
-                }}
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <span>합격</span>
-                  <span style={{ fontSize: '13px' }}>{record.status === '완료' ? '■' : '□'}</span>
-                </span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <span>불합격</span>
-                  <span style={{ fontSize: '13px' }}>□</span>
-                </span>
-              </div>
-            </td>
-            <td
-              style={{
-                backgroundColor: headerBg,
-                border: '1px solid #000000',
-                fontWeight: 'bold',
-                textAlign: 'center',
-                padding: '4px 2px',
-                letterSpacing: '2px',
-                lineHeight: 1.25,
-                verticalAlign: 'middle',
-              }}
-            >
-              최종처리<br />이 &nbsp; 행
-            </td>
-            <td
-              style={{
-                border: '1px solid #000000',
-                padding: '6px 12px',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '24px',
-                }}
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <span>필요</span>
-                  <span style={{ fontSize: '13px' }}>□</span>
-                </span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <span>불필요</span>
-                  <span style={{ fontSize: '13px' }}>
-                    {record.status === '완료' ? '■' : '□'}
-                  </span>
-                </span>
-              </div>
-            </td>
-          </tr>
-
-          {/* Row 13: 일자 기재란 (작성일자 / 검토일자 / 승인일자) */}
+          {/* Row 12: 일자 기재란 (작성일자 / 검토일자 / 승인일자) */}
           <tr>
             <td
               colSpan={4}

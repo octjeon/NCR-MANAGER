@@ -7,9 +7,11 @@ import {
   Ship,
   Sparkles,
   Info,
+  Cloud,
 } from 'lucide-react';
 import { NonconformityRecord } from './types';
 import { StorageService } from './services/storage';
+import { DaehanLogo } from './components/DaehanLogo';
 import { NewRegistrationTab } from './components/NewRegistrationTab';
 import { ProgressManagementTab } from './components/ProgressManagementTab';
 import { DetailModal } from './components/DetailModal';
@@ -23,6 +25,9 @@ export default function App() {
   // Master records state
   const [records, setRecords] = useState<NonconformityRecord[]>([]);
 
+  // Cloud sync indicator
+  const [isCloudSynced, setIsCloudSynced] = useState(false);
+
   // Selected Record for Detail Modal
   const [selectedRecord, setSelectedRecord] = useState<NonconformityRecord | null>(null);
 
@@ -32,9 +37,26 @@ export default function App() {
   // Registered List Modal (from registration complete screen)
   const [isRegisteredListOpen, setIsRegisteredListOpen] = useState(false);
 
-  // Load records from storage on mount
+  // Subscribe to real-time records from Firebase Firestore on mount
   useEffect(() => {
-    loadRecords();
+    // Initial quick read from local storage
+    const initial = StorageService.getRecords();
+    setRecords(initial);
+
+    // Live subscription to Firestore cloud database
+    const unsubscribe = StorageService.subscribeRecords(
+      (freshRecords) => {
+        setRecords(freshRecords);
+        setIsCloudSynced(true);
+      },
+      () => {
+        setIsCloudSynced(false);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const loadRecords = () => {
@@ -42,7 +64,7 @@ export default function App() {
     setRecords(data);
   };
 
-  const handleRecordRegistered = (newRecord: NonconformityRecord) => {
+  const handleRecordRegistered = (_newRecord: NonconformityRecord) => {
     loadRecords();
   };
 
@@ -70,8 +92,8 @@ export default function App() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
-              <Ship className="w-5 h-5" />
+            <div className="w-11 h-11 rounded-xl bg-white border border-slate-200/90 shadow-2xs p-1 flex items-center justify-center shrink-0">
+              <DaehanLogo className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -81,6 +103,12 @@ export default function App() {
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
                   DAEHAN
                 </span>
+                {isCloudSynced && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                    <Cloud className="w-3 h-3 text-emerald-600" />
+                    클라우드 연동
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                 조선업 호선별 부적합(불량) 관리 시스템

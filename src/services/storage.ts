@@ -1,4 +1,14 @@
 import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+} from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth } from '../lib/firebase';
+import {
   ACTION_PLAN_OPTIONS,
   ActionPlan,
   DEFAULT_INSPECTION_ITEMS,
@@ -8,12 +18,27 @@ import {
 } from '../types';
 import { createShipyardPhotoSvg } from '../utils/sampleImages';
 
+// Try anonymous auth silently for seamless Firebase access
+try {
+  signInAnonymously(auth).catch((err) => {
+    console.info('Firebase auth note:', err?.message || err);
+  });
+} catch (err) {
+  // safe fallback
+}
+
 const STORAGE_KEYS = {
   RECORDS: 'daehan_qc_records_v1',
   REGISTRARS: 'daehan_qc_registrars_v1',
   INSPECTION_ITEMS: 'daehan_qc_items_v1',
   NC_TYPES: 'daehan_qc_nc_types_v1',
 };
+
+export interface MasterSettings {
+  registrars: string[];
+  inspectionItems: string[];
+  nonconformityTypes: string[];
+}
 
 // Self-heal record schema to prevent undefined field crashes
 function normalizeRecord(raw: any, index: number): NonconformityRecord {
@@ -24,7 +49,7 @@ function normalizeRecord(raw: any, index: number): NonconformityRecord {
     _rowIndex: rowNumber,
     id: idStr,
     registeredAt: raw.registeredAt || new Date().toISOString().replace('T', ' ').substring(0, 19),
-    shipNo: String(raw.shipNo || '').padStart(4, '0'),
+    shipNo: String(raw.shipNo || '').replace(/[^0-9]/g, ''),
     inspectionDate: raw.inspectionDate || new Date().toISOString().split('T')[0],
     registrar: raw.registrar || '하대기',
     inspectionItems: Array.isArray(raw.inspectionItems)
@@ -52,7 +77,7 @@ function normalizeRecord(raw: any, index: number): NonconformityRecord {
   };
 }
 
-// Initial seed data for authentic demoing of both "진행중" and "완료" cases
+// Initial seed data for authentic demoing
 function getInitialSeedRecords(): NonconformityRecord[] {
   const photo1 = createShipyardPhotoSvg('용접 결함 (Undercut 발생)', 'SPOOL JOINT #12', '#ef4444');
   const photo2 = createShipyardPhotoSvg('파이프 단면 Misalignment 2.5mm', 'FLANGE FIT-UP #08', '#f59e0b');
@@ -125,13 +150,14 @@ export const StorageService = {
 
   saveRegistrars(list: string[]) {
     localStorage.setItem(STORAGE_KEYS.REGISTRARS, JSON.stringify(list));
+    this.syncMasterToFirestore({ registrars: list });
   },
 
   addRegistrar(name: string): boolean {
     const trimmed = name.trim();
     if (!trimmed) return false;
     const current = this.getRegistrars();
-    if (current.includes(trimmed)) return false; // 중복 방지
+    if (current.includes(trimmed)) return false;
     const updated = [...current, trimmed];
     this.saveRegistrars(updated);
     return true;
@@ -154,6 +180,7 @@ export const StorageService = {
 
   saveInspectionItems(list: string[]) {
     localStorage.setItem(STORAGE_KEYS.INSPECTION_ITEMS, JSON.stringify(list));
+    this.syncMasterToFirestore({ inspectionItems: list });
   },
 
   addInspectionItem(name: string): boolean {
@@ -183,6 +210,7 @@ export const StorageService = {
 
   saveNonconformityTypes(list: string[]) {
     localStorage.setItem(STORAGE_KEYS.NC_TYPES, JSON.stringify(list));
+    this.syncMasterToFirestore({ nonconformityTypes: list });
   },
 
   addNonconformityType(name: string): boolean {
@@ -202,7 +230,6 @@ export const StorageService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // self heal & normalize
           return parsed.map((item, idx) => normalizeRecord(item, idx));
         }
       }
@@ -210,14 +237,12 @@ export const StorageService = {
       console.error('Failed to read records from storage', e);
     }
 
-    // Seed initial records
     const seeds = getInitialSeedRecords();
     this.saveRecords(seeds);
     return seeds;
   },
 
   saveRecords(records: NonconformityRecord[]) {
-    // Keep records indexed
     const normalized = records.map((r, idx) => normalizeRecord(r, idx));
     localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(normalized));
   },
@@ -240,7 +265,7 @@ export const StorageService = {
       _rowIndex: nextRowIndex,
       id: nextId,
       registeredAt,
-      shipNo: input.shipNo,
+      shipNo: String(input.shipNo || '').replace(/[^0-9]/g, ''),
       inspectionDate: input.inspectionDate,
       registrar: input.registrar,
       inspectionItems: input.inspectionItems,
@@ -260,8 +285,11 @@ export const StorageService = {
     };
 
     const updated = [newRecord, ...current];
-    // Re-index so _rowIndex stays consistent with row positioning
     this.saveRecords(updated);
+
+    // Asynchronously persist to Firestore cloud
+    this.saveRecordToFirestore(newRecord);
+
     return newRecord;
   },
 
@@ -280,16 +308,146 @@ export const StorageService = {
       ...target,
       ...updates,
       _rowIndex: target._rowIndex,
-      id: target.id, // ID remains invariant
+      id: target.id,
+      shipNo: updates.shipNo ? String(updates.shipNo).replace(/[^0-9]/g, '') : target.shipNo,
     };
 
     current[targetIdx] = updatedRecord;
     this.saveRecords(current);
+
+    // Asynchronously persist to Firestore cloud
+    this.saveRecordToFirestore(updatedRecord);
+
     return updatedRecord;
   },
 
   getRecordByRowIndex(rowIndex: number): NonconformityRecord | null {
     const current = this.getRecords();
     return current.find((r) => r._rowIndex === rowIndex) || null;
+  },
+
+  // -------------------------------------------------------------
+  // Firestore Cloud Synchronization Layer
+  // -------------------------------------------------------------
+
+  async saveRecordToFirestore(record: NonconformityRecord) {
+    try {
+      const docRef = doc(db, 'records', record.id);
+      await setDoc(docRef, {
+        ...record,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Firestore record write warning (cached locally):', err);
+    }
+  },
+
+  async syncMasterToFirestore(partialSettings: Partial<MasterSettings>) {
+    try {
+      const docRef = doc(db, 'settings', 'master');
+      await setDoc(
+        docRef,
+        {
+          registrars: this.getRegistrars(),
+          inspectionItems: this.getInspectionItems(),
+          nonconformityTypes: this.getNonconformityTypes(),
+          ...partialSettings,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn('Firestore master sync warning:', err);
+    }
+  },
+
+  // Subscribe to real-time updates from Firestore for all records
+  subscribeRecords(
+    onRecordsUpdate: (records: NonconformityRecord[]) => void,
+    onError?: (err: any) => void
+  ): () => void {
+    const recordsCol = collection(db, 'records');
+
+    const unsubscribe = onSnapshot(
+      recordsCol,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const remoteRecords: NonconformityRecord[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            remoteRecords.push(normalizeRecord(data, remoteRecords.length));
+          });
+
+          // Sort by _rowIndex ascending
+          remoteRecords.sort((a, b) => a._rowIndex - b._rowIndex);
+
+          // Update local storage cache
+          localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(remoteRecords));
+          onRecordsUpdate(remoteRecords);
+        } else {
+          // Firestore collection is currently empty: seed with initial records
+          const initialSeeds = getInitialSeedRecords();
+          initialSeeds.forEach((rec) => {
+            this.saveRecordToFirestore(rec);
+          });
+          onRecordsUpdate(initialSeeds);
+        }
+      },
+      (error) => {
+        console.warn('Firestore subscription notice (using local cache):', error);
+        if (onError) onError(error);
+        // Fallback to local cache
+        onRecordsUpdate(this.getRecords());
+      }
+    );
+
+    return unsubscribe;
+  },
+
+  // Subscribe to real-time master settings from Firestore
+  subscribeMasterSettings(
+    onSettingsUpdate: (settings: MasterSettings) => void
+  ): () => void {
+    const masterDocRef = doc(db, 'settings', 'master');
+
+    const unsubscribe = onSnapshot(
+      masterDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as Partial<MasterSettings>;
+          if (Array.isArray(data.registrars) && data.registrars.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.REGISTRARS, JSON.stringify(data.registrars));
+          }
+          if (Array.isArray(data.inspectionItems) && data.inspectionItems.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.INSPECTION_ITEMS, JSON.stringify(data.inspectionItems));
+          }
+          if (Array.isArray(data.nonconformityTypes) && data.nonconformityTypes.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.NC_TYPES, JSON.stringify(data.nonconformityTypes));
+          }
+          onSettingsUpdate({
+            registrars: this.getRegistrars(),
+            inspectionItems: this.getInspectionItems(),
+            nonconformityTypes: this.getNonconformityTypes(),
+          });
+        } else {
+          // Initialize master settings in Firestore
+          this.syncMasterToFirestore({
+            registrars: DEFAULT_REGISTRARS,
+            inspectionItems: DEFAULT_INSPECTION_ITEMS,
+            nonconformityTypes: DEFAULT_NONCONFORMITY_TYPES,
+          });
+          onSettingsUpdate({
+            registrars: DEFAULT_REGISTRARS,
+            inspectionItems: DEFAULT_INSPECTION_ITEMS,
+            nonconformityTypes: DEFAULT_NONCONFORMITY_TYPES,
+          });
+        }
+      },
+      (error) => {
+        console.warn('Firestore settings subscription notice:', error);
+      }
+    );
+
+    return unsubscribe;
   },
 };
