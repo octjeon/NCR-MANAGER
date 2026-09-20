@@ -8,17 +8,20 @@ import {
   AlertTriangle,
   Layers,
   Image as ImageIcon,
+  FileText,
 } from 'lucide-react';
 import { NonconformityRecord } from '../types';
 
 interface ProgressManagementTabProps {
   records: NonconformityRecord[];
   onSelectRecord: (record: NonconformityRecord) => void;
+  onOpenReportPdf?: (record: NonconformityRecord) => void;
 }
 
 export const ProgressManagementTab: React.FC<ProgressManagementTabProps> = ({
   records,
   onSelectRecord,
+  onOpenReportPdf,
 }) => {
   // Sorted by newest registration (최근 등록순)
   const sortedRecords = [...records].sort((a, b) => {
@@ -147,9 +150,26 @@ export const ProgressManagementTab: React.FC<ProgressManagementTabProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform">
-                    <span>상세보기</span>
-                    <ChevronRight className="w-4 h-4" />
+                  <div className="flex items-center gap-2">
+                    {onOpenReportPdf && (
+                      <button
+                        type="button"
+                        id={`card-report-pdf-btn-${record.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenReportPdf(record);
+                        }}
+                        className="px-2 py-1 text-[11px] font-bold text-slate-700 hover:text-red-700 bg-slate-100 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                        title="부적합보고서 PDF 출력"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-red-500" />
+                        <span>보고서 PDF</span>
+                      </button>
+                    )}
+                    <div className="flex items-center gap-0.5 text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform">
+                      <span>상세보기</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
                   </div>
                 </div>
               </div>

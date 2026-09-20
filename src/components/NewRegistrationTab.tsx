@@ -14,6 +14,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Upload,
+  FileText,
 } from 'lucide-react';
 import { NonconformityRecord } from '../types';
 import { StorageService } from '../services/storage';
@@ -23,12 +24,14 @@ interface NewRegistrationTabProps {
   onRecordRegistered: (newRecord: NonconformityRecord) => void;
   onOpenRegisteredList: () => void;
   onNavigateToDetail: (record: NonconformityRecord) => void;
+  onOpenReportPdf?: (record: NonconformityRecord) => void;
 }
 
 export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
   onRecordRegistered,
   onOpenRegisteredList,
   onNavigateToDetail,
+  onOpenReportPdf,
 }) => {
   // Wizard Step: 1, 2, 3, 4, or 'complete'
   const [currentStep, setCurrentStep] = useState<number | 'complete'>(1);
@@ -316,13 +319,25 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
             </div>
           </div>
 
-          {/* 2 Required Action Buttons */}
+          {/* Action Buttons */}
           <div className="space-y-2.5">
+            {onOpenReportPdf && (
+              <button
+                type="button"
+                id="view-report-pdf-btn"
+                onClick={() => onOpenReportPdf(registeredRecord)}
+                className="w-full py-3 text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 active:scale-98 rounded-xl border border-slate-300 shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-red-500" />
+                <span>📄 부적합보고서 PDF 출력 (양식 DH-QP-870-01)</span>
+              </button>
+            )}
+
             <button
               type="button"
               id="reset-and-new-register-btn"
               onClick={handleResetForm}
-              className="w-full py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" /> 새 건 등록하기
             </button>
@@ -331,7 +346,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
               type="button"
               id="view-registered-list-btn"
               onClick={onOpenRegisteredList}
-              className="w-full py-3 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 active:scale-98 rounded-xl border border-blue-200 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 active:scale-98 rounded-xl border border-blue-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <List className="w-4 h-4" /> 등록된 건 목록
             </button>

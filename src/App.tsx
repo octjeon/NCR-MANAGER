@@ -14,6 +14,7 @@ import { NewRegistrationTab } from './components/NewRegistrationTab';
 import { ProgressManagementTab } from './components/ProgressManagementTab';
 import { DetailModal } from './components/DetailModal';
 import { RegisteredListModal } from './components/RegisteredListModal';
+import { ReportPreviewModal } from './components/ReportPreviewModal';
 
 export default function App() {
   // Navigation Tabs: 'new' (신규 등록) | 'manage' (진행 관리)
@@ -24,6 +25,9 @@ export default function App() {
 
   // Selected Record for Detail Modal
   const [selectedRecord, setSelectedRecord] = useState<NonconformityRecord | null>(null);
+
+  // Direct PDF Preview Record
+  const [previewPdfRecord, setPreviewPdfRecord] = useState<NonconformityRecord | null>(null);
 
   // Registered List Modal (from registration complete screen)
   const [isRegisteredListOpen, setIsRegisteredListOpen] = useState(false);
@@ -146,6 +150,7 @@ export default function App() {
               setActiveTab('manage');
               setSelectedRecord(rec);
             }}
+            onOpenReportPdf={(rec) => setPreviewPdfRecord(rec)}
           />
         )}
 
@@ -156,6 +161,7 @@ export default function App() {
               const fresh = StorageService.getRecordByRowIndex(rec._rowIndex) || rec;
               setSelectedRecord(fresh);
             }}
+            onOpenReportPdf={(rec) => setPreviewPdfRecord(rec)}
           />
         )}
       </main>
@@ -174,6 +180,13 @@ export default function App() {
         isOpen={isRegisteredListOpen}
         onClose={() => setIsRegisteredListOpen(false)}
         onSelectRecord={handleSelectRecordFromList}
+      />
+
+      {/* Direct Report Preview & PDF Print Modal */}
+      <ReportPreviewModal
+        record={previewPdfRecord}
+        isOpen={Boolean(previewPdfRecord)}
+        onClose={() => setPreviewPdfRecord(null)}
       />
     </div>
   );

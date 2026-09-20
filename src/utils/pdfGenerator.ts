@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import { NonconformityRecord } from '../types';
 
@@ -22,6 +22,7 @@ export async function generateAndDownloadPDF(
       logging: false,
       backgroundColor: '#ffffff',
       allowTaint: true,
+      windowWidth: 794, // exact A4 layout width
     });
 
     const imgData = canvas.toDataURL('image/jpeg', 0.95);

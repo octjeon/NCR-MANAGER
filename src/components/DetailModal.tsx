@@ -21,6 +21,7 @@ import { EmailConfirmModal } from './EmailConfirmModal';
 import { Lightbox } from './Lightbox';
 import { generateAndDownloadPDF } from '../utils/pdfGenerator';
 import { ReportPDFView } from './ReportPDFView';
+import { ReportPreviewModal } from './ReportPreviewModal';
 
 interface DetailModalProps {
   record: NonconformityRecord | null;
@@ -37,6 +38,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({
 }) => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isReportPreviewOpen, setIsReportPreviewOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -357,21 +359,11 @@ export const DetailModal: React.FC<DetailModalProps> = ({
               <button
                 type="button"
                 id="download-report-pdf-btn"
-                onClick={handleDownloadPDF}
-                disabled={isGeneratingPdf}
-                className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 active:scale-98 border border-slate-300 rounded-lg shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50"
+                onClick={() => setIsReportPreviewOpen(true)}
+                className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 active:scale-98 border border-slate-300 rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                {isGeneratingPdf ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                    <span>PDF 생성 중...</span>
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-3.5 h-3.5 text-red-500" />
-                    <span>📄 보고서 PDF 출력</span>
-                  </>
-                )}
+                <FileText className="w-3.5 h-3.5 text-red-500" />
+                <span>📄 보고서 PDF 출력</span>
               </button>
 
               <button
@@ -402,6 +394,13 @@ export const DetailModal: React.FC<DetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Official Report PDF Preview & Print Modal */}
+      <ReportPreviewModal
+        record={record}
+        isOpen={isReportPreviewOpen}
+        onClose={() => setIsReportPreviewOpen(false)}
+      />
 
       {/* Nested Status Management Modal (Higher z-index 50) */}
       <StatusManagementModal
