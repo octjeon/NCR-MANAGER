@@ -8,19 +8,21 @@ import {
   Sparkles,
   Info,
   Cloud,
+  Settings2,
 } from 'lucide-react';
 import { NonconformityRecord } from './types';
 import { StorageService } from './services/storage';
 import { DaehanLogo } from './components/DaehanLogo';
 import { NewRegistrationTab } from './components/NewRegistrationTab';
 import { ProgressManagementTab } from './components/ProgressManagementTab';
+import { ManagementTab } from './components/ManagementTab';
 import { DetailModal } from './components/DetailModal';
 import { RegisteredListModal } from './components/RegisteredListModal';
 import { ReportPreviewModal } from './components/ReportPreviewModal';
 
 export default function App() {
-  // Navigation Tabs: 'new' (신규 등록) | 'manage' (진행 관리)
-  const [activeTab, setActiveTab] = useState<'new' | 'manage'>('new');
+  // Navigation Tabs: 'new' (신규 등록) | 'manage' (진행 관리) | 'admin' (관리)
+  const [activeTab, setActiveTab] = useState<'new' | 'manage' | 'admin'>('new');
 
   // Master records state
   const [records, setRecords] = useState<NonconformityRecord[]>([]);
@@ -110,8 +112,8 @@ export default function App() {
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                조선업 호선별 부적합(불량) 관리 시스템
+              <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-0.5">
+                호선별 부적합 관리
               </p>
             </div>
           </div>
@@ -124,9 +126,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Top 2 Tabs (신규 등록 / 진행 관리) */}
+        {/* Top 3 Tabs (신규 등록 / 진행 관리 / 관리) */}
         <div className="max-w-3xl mx-auto px-4">
-          <div className="grid grid-cols-2 border-b border-slate-200 text-center">
+          <div className="grid grid-cols-3 border-b border-slate-200 text-center">
             {/* Tab 1: 신규 등록 */}
             <button
               type="button"
@@ -164,6 +166,24 @@ export default function App() {
                 </span>
               )}
             </button>
+
+            {/* Tab 3: 관리 (Admin) */}
+            <button
+              type="button"
+              id="nav-tab-admin"
+              onClick={() => {
+                loadRecords();
+                setActiveTab('admin');
+              }}
+              className={`py-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
+                activeTab === 'admin'
+                  ? 'border-blue-600 text-blue-600 bg-blue-50/40'
+                  : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50/80'
+              }`}
+            >
+              <Settings2 className="w-4 h-4" />
+              <span>관리</span>
+            </button>
           </div>
         </div>
       </header>
@@ -190,6 +210,18 @@ export default function App() {
               setSelectedRecord(fresh);
             }}
             onOpenReportPdf={(rec) => setPreviewPdfRecord(rec)}
+          />
+        )}
+
+        {activeTab === 'admin' && (
+          <ManagementTab
+            records={records}
+            onSelectRecord={(rec) => {
+              const fresh = StorageService.getRecordByRowIndex(rec._rowIndex) || rec;
+              setSelectedRecord(fresh);
+            }}
+            onOpenReportPdf={(rec) => setPreviewPdfRecord(rec)}
+            onRecordUpdated={loadRecords}
           />
         )}
       </main>

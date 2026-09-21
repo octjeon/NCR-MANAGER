@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Upload,
   FileText,
+  MapPin,
 } from 'lucide-react';
 import { NonconformityRecord } from '../types';
 import { StorageService } from '../services/storage';
@@ -46,6 +47,9 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
   const [ncTypesList, setNcTypesList] = useState<string[]>(() =>
     StorageService.getNonconformityTypes()
   );
+  const [locations, setLocations] = useState<string[]>(() =>
+    StorageService.getLocations()
+  );
 
   // Subscribe to live master settings from Firebase
   useEffect(() => {
@@ -53,6 +57,9 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
       setRegistrars(settings.registrars);
       setInspectionItemsList(settings.inspectionItems);
       setNcTypesList(settings.nonconformityTypes);
+      if (settings.locations && settings.locations.length > 0) {
+        setLocations(settings.locations);
+      }
     });
     return () => unsub();
   }, []);
@@ -60,6 +67,10 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
   // Form State
   // Step 1
   const [shipNo, setShipNo] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<string>(() => {
+    const locs = StorageService.getLocations();
+    return locs[0] || '본사';
+  });
   const [inspectionDate, setInspectionDate] = useState(
     () => new Date().toISOString().split('T')[0]
   );
@@ -90,6 +101,9 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
 
   const [showAddNcTypeModal, setShowAddNcTypeModal] = useState(false);
   const [newNcTypeName, setNewNcTypeName] = useState('');
+
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false);
+  const [newLocationName, setNewLocationName] = useState('');
 
   // Photo Input Refs & Modal State
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -151,6 +165,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     // Save record to storage
     const newRecord = StorageService.addRecord({
       shipNo: shipNo.trim(),
+      inspectionLocation: selectedLocation,
       inspectionDate: inspectionDate.trim(),
       registrar: selectedRegistrar.trim(),
       inspectionItems: selectedInspectionItems,
@@ -189,6 +204,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
 
   const handleResetForm = () => {
     setShipNo('');
+    setSelectedLocation(locations[0] || '본사');
     setInspectionDate(new Date().toISOString().split('T')[0]);
     setSelectedRegistrar(registrars[0] || '');
     setSelectedInspectionItems([]);
@@ -298,6 +314,21 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     }
   };
 
+  const handleAddLocation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLocationName.trim()) return;
+    const ok = StorageService.addLocation(newLocationName.trim());
+    if (ok) {
+      const updated = StorageService.getLocations();
+      setLocations(updated);
+      setSelectedLocation(newLocationName.trim());
+      setNewLocationName('');
+      setShowAddLocationModal(false);
+    } else {
+      alert('이미 존재하는 검사장소입니다.');
+    }
+  };
+
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim()) return;
@@ -351,6 +382,13 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
             <div className="flex justify-between">
               <span className="text-slate-400">발행번호:</span>
               <span className="font-mono font-bold text-slate-800">{registeredRecord.id}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">검사장소:</span>
+              <span className="font-semibold text-slate-800 flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-blue-600" />
+                {registeredRecord.inspectionLocation || '본사'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">검사일자:</span>
@@ -486,6 +524,42 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">조선소 선박 건조 호선 4자리 숫자</p>
+            </div>
+
+            {/* 검사장소 (콤보박스 선택 + 신규 추가) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                  <span>검사장소 선택</span> <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  id="add-location-btn"
+                  onClick={() => setShowAddLocationModal(true)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>장소 추가</span>
+                </button>
+              </div>
+              <div className="relative">
+                <select
+                  id="inspection-location-select"
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 cursor-pointer shadow-2xs"
+                >
+                  {locations.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                본사, 1공장, 2공장, 온산공장, 대원, 신라 등 검사가 진행된 장소를 선택하세요
+              </p>
             </div>
 
             {/* 검사일자 */}
@@ -962,13 +1036,56 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddNcTypeModal(false)}
-                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+                  className="px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer"
+                >
+                  추가
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: 신규 검사장소 추가 */}
+      {showAddLocationModal && (
+        <div
+          id="add-location-backdrop"
+          onClick={() => setShowAddLocationModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150"
+          >
+            <h3 className="text-sm font-bold text-slate-900 mb-1">검사장소 추가</h3>
+            <p className="text-xs text-slate-500 mb-3">새 검사장소명(공장명/협력사명)을 입력하세요</p>
+            <form onSubmit={handleAddLocation} className="space-y-3">
+              <input
+                type="text"
+                id="new-location-name-input"
+                value={newLocationName}
+                onChange={(e) => setNewLocationName(e.target.value)}
+                placeholder="예: 온산2공장 또는 삼우중공업"
+                autoFocus
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddLocationModal(false)}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-3.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer"
                 >
                   추가
                 </button>

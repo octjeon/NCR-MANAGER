@@ -14,6 +14,7 @@ import {
   Ship,
   AlertTriangle,
   Loader2,
+  MapPin,
 } from 'lucide-react';
 import { NonconformityRecord } from '../types';
 import { StatusManagementModal } from './StatusManagementModal';
@@ -170,7 +171,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({
             )}
 
             {/* Quick Grid Info */}
-            <div className="grid grid-cols-2 gap-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
               <div>
                 <span className="text-xs text-slate-400 block mb-0.5">검사일자</span>
                 <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
@@ -179,6 +180,13 @@ export const DetailModal: React.FC<DetailModalProps> = ({
                 </span>
               </div>
               <div>
+                <span className="text-xs text-slate-400 block mb-0.5">검사장소</span>
+                <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                  {record.inspectionLocation || '본사'}
+                </span>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
                 <span className="text-xs text-slate-400 block mb-0.5">등록자</span>
                 <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-slate-500" />

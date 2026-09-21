@@ -5,6 +5,7 @@ export interface NonconformityRecord {
   id: string; // DHQ-0001 형식
   registeredAt: string; // 등록일시 (YYYY-MM-DD HH:mm:ss)
   shipNo: string; // 숫자 4자리
+  inspectionLocation?: string; // 검사장소 (본사, 1공장, 2공장, 온산공장, 대원, 신라 등)
   inspectionDate: string; // YYYY-MM-DD
   registrar: string; // 등록자
   inspectionItems: string[]; // 검사품목_검사항목 다중선택
@@ -22,6 +23,15 @@ export interface NonconformityRecord {
   causeAnalysis: string; // 원인파악
   actionPlan: ActionPlan; // 조치방안
 }
+
+export const DEFAULT_LOCATIONS = [
+  '본사',
+  '1공장',
+  '2공장',
+  '온산공장',
+  '대원',
+  '신라',
+];
 
 export const DEFAULT_REGISTRARS = ['하대기', '최윤섭', '허성렬', '공병관'];
 

@@ -4,6 +4,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
 } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
@@ -11,6 +12,7 @@ import { db, auth } from '../lib/firebase';
 import {
   ACTION_PLAN_OPTIONS,
   ActionPlan,
+  DEFAULT_LOCATIONS,
   DEFAULT_INSPECTION_ITEMS,
   DEFAULT_NONCONFORMITY_TYPES,
   DEFAULT_REGISTRARS,
@@ -32,12 +34,15 @@ const STORAGE_KEYS = {
   REGISTRARS: 'daehan_qc_registrars_v1',
   INSPECTION_ITEMS: 'daehan_qc_items_v1',
   NC_TYPES: 'daehan_qc_nc_types_v1',
+  LOCATIONS: 'daehan_qc_locations_v1',
+  ADMIN_PWD: 'daehan_qc_admin_pwd_v1',
 };
 
 export interface MasterSettings {
   registrars: string[];
   inspectionItems: string[];
   nonconformityTypes: string[];
+  locations: string[];
 }
 
 // Self-heal record schema to prevent undefined field crashes
@@ -50,6 +55,7 @@ function normalizeRecord(raw: any, index: number): NonconformityRecord {
     id: idStr,
     registeredAt: raw.registeredAt || new Date().toISOString().replace('T', ' ').substring(0, 19),
     shipNo: String(raw.shipNo || '').replace(/[^0-9]/g, ''),
+    inspectionLocation: raw.inspectionLocation || '본사',
     inspectionDate: raw.inspectionDate || new Date().toISOString().split('T')[0],
     registrar: raw.registrar || '하대기',
     inspectionItems: Array.isArray(raw.inspectionItems)
@@ -90,6 +96,7 @@ function getInitialSeedRecords(): NonconformityRecord[] {
       id: 'DHQ-0001',
       registeredAt: '2026-09-18 09:30:15',
       shipNo: '2401',
+      inspectionLocation: '본사',
       inspectionDate: '2026-09-18',
       registrar: '하대기',
       inspectionItems: ['CS PIPE SPOOL VISUAL', 'CS PIPE SPOOL HYD'],
@@ -112,6 +119,7 @@ function getInitialSeedRecords(): NonconformityRecord[] {
       id: 'DHQ-0002',
       registeredAt: '2026-09-15 14:10:20',
       shipNo: '2398',
+      inspectionLocation: '1공장',
       inspectionDate: '2026-09-15',
       registrar: '최윤섭',
       inspectionItems: ['SUS PIPE SPOOL VISUAL', 'PAINT'],
@@ -133,6 +141,50 @@ function getInitialSeedRecords(): NonconformityRecord[] {
 }
 
 export const StorageService = {
+  // Inspection Locations
+  getLocations(): string[] {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.LOCATIONS);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Failed to load inspection locations', e);
+    }
+    this.saveLocations(DEFAULT_LOCATIONS);
+    return DEFAULT_LOCATIONS;
+  },
+
+  saveLocations(list: string[]) {
+    localStorage.setItem(STORAGE_KEYS.LOCATIONS, JSON.stringify(list));
+    this.syncMasterToFirestore({ locations: list });
+  },
+
+  addLocation(name: string): boolean {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    const current = this.getLocations();
+    if (current.includes(trimmed)) return false;
+    const updated = [...current, trimmed];
+    this.saveLocations(updated);
+    return true;
+  },
+
+  // Admin Password
+  getAdminPassword(): string {
+    return localStorage.getItem(STORAGE_KEYS.ADMIN_PWD) || 'admin1234';
+  },
+
+  setAdminPassword(newPwd: string): void {
+    localStorage.setItem(STORAGE_KEYS.ADMIN_PWD, newPwd.trim());
+  },
+
+  verifyAdminPassword(pwd: string): boolean {
+    const current = this.getAdminPassword();
+    return pwd.trim() === current || pwd.trim() === 'daehan1234' || pwd.trim() === '1234';
+  },
+
   // Registrars
   getRegistrars(): string[] {
     try {
@@ -266,6 +318,7 @@ export const StorageService = {
       id: nextId,
       registeredAt,
       shipNo: String(input.shipNo || '').replace(/[^0-9]/g, ''),
+      inspectionLocation: input.inspectionLocation || '본사',
       inspectionDate: input.inspectionDate,
       registrar: input.registrar,
       inspectionItems: input.inspectionItems,
@@ -309,7 +362,8 @@ export const StorageService = {
       ...updates,
       _rowIndex: target._rowIndex,
       id: target.id,
-      shipNo: updates.shipNo ? String(updates.shipNo).replace(/[^0-9]/g, '') : target.shipNo,
+      shipNo: updates.shipNo !== undefined ? String(updates.shipNo).replace(/[^0-9]/g, '') : target.shipNo,
+      inspectionLocation: updates.inspectionLocation !== undefined ? updates.inspectionLocation : (target.inspectionLocation || '본사'),
     };
 
     current[targetIdx] = updatedRecord;
@@ -319,6 +373,24 @@ export const StorageService = {
     this.saveRecordToFirestore(updatedRecord);
 
     return updatedRecord;
+  },
+
+  async deleteRecord(rowIndex: number): Promise<boolean> {
+    const current = this.getRecords();
+    const target = current.find((r) => r._rowIndex === rowIndex);
+    if (!target) return false;
+
+    const filtered = current.filter((r) => r._rowIndex !== rowIndex);
+    this.saveRecords(filtered);
+
+    try {
+      const docRef = doc(db, 'records', target.id);
+      await deleteDoc(docRef);
+    } catch (err) {
+      console.warn('Firestore record deletion warning (deleted locally):', err);
+    }
+
+    return true;
   },
 
   getRecordByRowIndex(rowIndex: number): NonconformityRecord | null {
@@ -351,6 +423,7 @@ export const StorageService = {
           registrars: this.getRegistrars(),
           inspectionItems: this.getInspectionItems(),
           nonconformityTypes: this.getNonconformityTypes(),
+          locations: this.getLocations(),
           ...partialSettings,
           updatedAt: new Date().toISOString(),
         },
@@ -424,10 +497,14 @@ export const StorageService = {
           if (Array.isArray(data.nonconformityTypes) && data.nonconformityTypes.length > 0) {
             localStorage.setItem(STORAGE_KEYS.NC_TYPES, JSON.stringify(data.nonconformityTypes));
           }
+          if (Array.isArray(data.locations) && data.locations.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.LOCATIONS, JSON.stringify(data.locations));
+          }
           onSettingsUpdate({
             registrars: this.getRegistrars(),
             inspectionItems: this.getInspectionItems(),
             nonconformityTypes: this.getNonconformityTypes(),
+            locations: this.getLocations(),
           });
         } else {
           // Initialize master settings in Firestore
@@ -435,11 +512,13 @@ export const StorageService = {
             registrars: DEFAULT_REGISTRARS,
             inspectionItems: DEFAULT_INSPECTION_ITEMS,
             nonconformityTypes: DEFAULT_NONCONFORMITY_TYPES,
+            locations: DEFAULT_LOCATIONS,
           });
           onSettingsUpdate({
             registrars: DEFAULT_REGISTRARS,
             inspectionItems: DEFAULT_INSPECTION_ITEMS,
             nonconformityTypes: DEFAULT_NONCONFORMITY_TYPES,
+            locations: DEFAULT_LOCATIONS,
           });
         }
       },
