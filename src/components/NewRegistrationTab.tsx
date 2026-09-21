@@ -17,6 +17,8 @@ import {
   Upload,
   FileText,
   MapPin,
+  ChevronDown,
+  Layers,
 } from 'lucide-react';
 import { NonconformityRecord } from '../types';
 import { StorageService } from '../services/storage';
@@ -77,6 +79,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
   const [selectedRegistrar, setSelectedRegistrar] = useState(registrars[0] || '');
 
   // Step 2
+  const [selectedInspectionItem, setSelectedInspectionItem] = useState<string>('');
   const [selectedInspectionItems, setSelectedInspectionItems] = useState<string[]>([]);
 
   // Step 3
@@ -132,8 +135,8 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
 
   // Step 2 Validation
   const validateStep2 = (): boolean => {
-    if (selectedInspectionItems.length === 0) {
-      setErrorMsg('검사항목을 최소 1개 이상 선택해주세요.');
+    if (!selectedInspectionItem.trim()) {
+      setErrorMsg('검사품목 / 검사항목을 콤보 박스에서 선택해주세요.');
       return false;
     }
     setErrorMsg(null);
@@ -168,7 +171,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
       inspectionLocation: selectedLocation,
       inspectionDate: inspectionDate.trim(),
       registrar: selectedRegistrar.trim(),
-      inspectionItems: selectedInspectionItems,
+      inspectionItems: selectedInspectionItem.trim() ? [selectedInspectionItem.trim()] : selectedInspectionItems,
       nonconformityTypes: selectedNcTypes,
       detailContent: detailContent.trim(),
       evidencePhotos: photos,
@@ -207,6 +210,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     setSelectedLocation(locations[0] || '본사');
     setInspectionDate(new Date().toISOString().split('T')[0]);
     setSelectedRegistrar(registrars[0] || '');
+    setSelectedInspectionItem('');
     setSelectedInspectionItems([]);
     setSelectedNcTypes([]);
     setDetailContent('');
@@ -335,10 +339,13 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     const ok = StorageService.addInspectionItem(newItemName.trim());
     if (ok) {
       const updated = StorageService.getInspectionItems();
+      const addedItem = newItemName.trim().toUpperCase();
       setInspectionItemsList(updated);
-      setSelectedInspectionItems((prev) => [...prev, newItemName.trim().toUpperCase()]);
+      setSelectedInspectionItem(addedItem);
+      setSelectedInspectionItems([addedItem]);
       setNewItemName('');
       setShowAddItemModal(false);
+      if (errorMsg) setErrorMsg(null);
     } else {
       alert('이미 존재하는 항목입니다.');
     }
@@ -625,62 +632,78 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
           </div>
         )}
 
-        {/* STEP 2: 검사품 및 검사항목 (다중 선택 + 추가) */}
+        {/* STEP 2: 검사품목 / 검사항목 (콤보 박스 단일 선택 + 추가) */}
         {currentStep === 2 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold text-slate-800">
-                  검사품목 / 검사항목 선택 <span className="text-red-500">*</span>
+                <h3 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  <span>검사품목 / 검사항목 선택 (1개 선택)</span> <span className="text-red-500">*</span>
                 </h3>
-                <p className="text-[11px] text-slate-400">다중 선택 가능 (최소 1개 필수)</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  콤보 박스 목록을 클릭하여 해당 검사품목 또는 검사항목 1개를 선택하세요
+                </p>
               </div>
               <button
                 type="button"
                 id="open-add-item-modal-btn"
                 onClick={() => setShowAddItemModal(true)}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 shrink-0"
+                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg border border-blue-200 transition-colors shrink-0 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" /> 검사항목 추가
+                <Plus className="w-3.5 h-3.5" /> <span>검사항목 추가</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {inspectionItemsList.map((item) => {
-                const isSelected = selectedInspectionItems.includes(item);
-                return (
-                  <button
-                    type="button"
-                    key={item}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedInspectionItems((prev) => prev.filter((i) => i !== item));
-                      } else {
-                        setSelectedInspectionItems((prev) => [...prev, item]);
-                      }
-                      if (errorMsg) setErrorMsg(null);
-                    }}
-                    className={`py-2.5 px-3.5 rounded-xl text-xs font-semibold border text-left transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-50/80 text-blue-800 shadow-xs'
-                        : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span>{item}</span>
-                    <span
-                      className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ml-2 ${
-                        isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* 검사품목 콤보 박스 드롭다운 */}
+            <div className="space-y-3">
+              <div className="relative">
+                <select
+                  id="inspection-item-select"
+                  value={selectedInspectionItem}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedInspectionItem(val);
+                    setSelectedInspectionItems(val ? [val] : []);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
+                  className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 cursor-pointer shadow-2xs appearance-none pr-10"
+                >
+                  <option value="" disabled className="text-slate-400">
+                    -- 검사품목 / 검사항목을 선택하세요 (1개 선택) --
+                  </option>
+                  {inspectionItemsList.map((item) => (
+                    <option key={item} value={item} className="text-slate-800 font-medium py-1">
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
 
-            <div className="text-right text-[11px] text-slate-400">
-              선택됨: <span className="font-bold text-blue-600">{selectedInspectionItems.length}</span>개
+              {/* 선택된 품목 상태 표시 카드 */}
+              {selectedInspectionItem ? (
+                <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between animate-in fade-in duration-150">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                    <span className="text-xs text-slate-600">선택된 검사품목:</span>
+                    <span className="text-xs font-bold text-blue-900 bg-white px-2.5 py-1 rounded-md border border-blue-200 shadow-2xs">
+                      {selectedInspectionItem}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5 text-blue-600" />
+                    <span>단일 선택 완료</span>
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-800 flex items-center gap-2">
+                  <span className="text-amber-500 font-bold">!</span>
+                  <span>상단 콤보 박스를 클릭하여 검사품목을 하나 선택해주세요. 목록에 없는 경우 우측 상단 [+ 검사항목 추가]로 신규 등록할 수 있습니다.</span>
+                </div>
+              )}
             </div>
           </div>
         )}
