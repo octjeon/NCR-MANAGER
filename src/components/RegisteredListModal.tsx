@@ -17,6 +17,11 @@ export const RegisteredListModal: React.FC<RegisteredListModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const sortedRecords = [...records].sort((a, b) => {
+    if (b._rowIndex !== a._rowIndex) return b._rowIndex - a._rowIndex;
+    return (b.registeredAt || '').localeCompare(a.registeredAt || '');
+  });
+
   return (
     <div
       id="registered-list-modal-backdrop"
@@ -31,7 +36,7 @@ export const RegisteredListModal: React.FC<RegisteredListModalProps> = ({
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div>
             <h3 className="font-bold text-slate-900 text-base">등록된 부적합 건 목록</h3>
-            <p className="text-xs text-slate-500">총 {records.length}건이 등록되어 있습니다</p>
+            <p className="text-xs text-slate-500">총 {sortedRecords.length}건이 등록되어 있습니다</p>
           </div>
           <button
             type="button"
@@ -44,12 +49,12 @@ export const RegisteredListModal: React.FC<RegisteredListModalProps> = ({
 
         {/* List Content */}
         <div className="p-4 overflow-y-auto space-y-2 flex-1 divide-y divide-slate-100">
-          {records.length === 0 ? (
+          {sortedRecords.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-xs">
               등록된 부적합 건이 없습니다.
             </div>
           ) : (
-            records.map((rec) => {
+            sortedRecords.map((rec) => {
               const isProgress = rec.status === '진행중';
               return (
                 <div

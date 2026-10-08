@@ -35,6 +35,15 @@ export const DEFAULT_LOCATIONS = [
 
 export const DEFAULT_REGISTRARS = ['하대기', '최윤섭', '허성렬', '공병관'];
 
+export const DEFAULT_USER_PASSWORD = '122333';
+
+export interface AppUser {
+  name: string; // 등록자(사용자) 성명
+  password: string; // 로그인 비밀번호 (초기값: 122333)
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export const DEFAULT_INSPECTION_ITEMS = [
   'CS PIPE SPOOL VISUAL',
   'CS PIPE SPOOL HYD',

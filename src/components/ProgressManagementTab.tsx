@@ -25,11 +25,13 @@ export const ProgressManagementTab: React.FC<ProgressManagementTabProps> = ({
 }) => {
   // Sorted by newest registration (최근 등록순)
   const sortedRecords = [...records].sort((a, b) => {
-    // Sort descending by row index or registeredAt
+    if (b._rowIndex !== a._rowIndex) {
+      return b._rowIndex - a._rowIndex;
+    }
     if (a.registeredAt && b.registeredAt) {
       return b.registeredAt.localeCompare(a.registeredAt);
     }
-    return b._rowIndex - a._rowIndex;
+    return 0;
   });
 
   return (
