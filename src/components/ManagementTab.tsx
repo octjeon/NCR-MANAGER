@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Lock,
   Unlock,
@@ -23,13 +23,15 @@ import {
   Ship,
   MapPin,
   User,
+  Users,
+  UserPlus,
   ArrowUpDown,
   RotateCcw,
   Check,
   X,
   FileText,
 } from 'lucide-react';
-import { NonconformityRecord } from '../types';
+import { AppUser, DEFAULT_USER_PASSWORD, NonconformityRecord } from '../types';
 import { StorageService } from '../services/storage';
 import { EditRecordModal } from './EditRecordModal';
 import { AnalysisReportModal } from './AnalysisReportModal';
@@ -63,8 +65,86 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const [confirmNewPwdInput, setConfirmNewPwdInput] = useState('');
   const [changePwdMsg, setChangePwdMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
-  // Sub-navigation within Management Tab: 'data' (자료 수정/삭제) | 'analysis' (실적 분석)
-  const [subTab, setSubTab] = useState<'data' | 'analysis'>('data');
+  // Sub-navigation within Management Tab: 'data' (자료 수정/삭제) | 'analysis' (실적 분석) | 'users' (사용자/등록자 관리)
+  const [subTab, setSubTab] = useState<'data' | 'analysis' | 'users'>('data');
+
+  // -------------------------------------------------------------
+  // USER (REGISTRAR) MANAGEMENT State
+  // -------------------------------------------------------------
+  const [usersList, setUsersList] = useState<AppUser[]>(() => StorageService.getUsers());
+  const [newUserName, setNewUserName] = useState('');
+  const [userMgmtFeedback, setUserMgmtFeedback] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const [editingUserPwdTarget, setEditingUserPwdTarget] = useState<AppUser | null>(null);
+  const [adminNewUserPwd, setAdminNewUserPwd] = useState('');
+
+  useEffect(() => {
+    const unsub = StorageService.subscribeMasterSettings((settings) => {
+      setUsersList(settings.users || StorageService.getUsers());
+    });
+    return () => unsub();
+  }, []);
+
+  const showUserToast = (type: 'success' | 'error', text: string) => {
+    setUserMgmtFeedback({ type, text });
+    setTimeout(() => {
+      setUserMgmtFeedback(null);
+    }, 3000);
+  };
+
+  const handleAdminAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = StorageService.addUser(newUserName, DEFAULT_USER_PASSWORD);
+    if (!res.ok) {
+      showUserToast('error', res.message || '사용자 추가에 실패했습니다.');
+      return;
+    }
+    const addedName = newUserName.trim();
+    setNewUserName('');
+    setUsersList(StorageService.getUsers());
+    showUserToast(
+      'success',
+      `'${addedName}' 사용자가 등록되었습니다. (초기 비밀번호: ${DEFAULT_USER_PASSWORD})`
+    );
+  };
+
+  const handleAdminResetUserPassword = (userName: string) => {
+    const ok = StorageService.resetUserPassword(userName);
+    if (ok) {
+      setUsersList(StorageService.getUsers());
+      showUserToast(
+        'success',
+        `'${userName}' 님의 비밀번호가 초기값(${DEFAULT_USER_PASSWORD})으로 초기화되었습니다.`
+      );
+    }
+  };
+
+  const handleAdminSetUserPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUserPwdTarget) return;
+    const res = StorageService.adminSetUserPassword(editingUserPwdTarget.name, adminNewUserPwd);
+    if (!res.ok) {
+      showUserToast('error', res.message || '비밀번호 변경에 실패했습니다.');
+      return;
+    }
+    const targetName = editingUserPwdTarget.name;
+    setEditingUserPwdTarget(null);
+    setAdminNewUserPwd('');
+    setUsersList(StorageService.getUsers());
+    showUserToast('success', `'${targetName}' 님의 비밀번호가 변경되었습니다.`);
+  };
+
+  const handleAdminDeleteUser = (userName: string) => {
+    const res = StorageService.deleteUser(userName);
+    if (!res.ok) {
+      showUserToast('error', res.message || '사용자 삭제에 실패했습니다.');
+      return;
+    }
+    setUsersList(StorageService.getUsers());
+    showUserToast('success', `'${userName}' 사용자가 삭제되었습니다.`);
+  };
 
   // -------------------------------------------------------------
   // DATA MANAGEMENT (Edit / Delete) State
@@ -533,7 +613,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         </div>
 
         {/* Sub-tab switcher */}
-        <div className="grid grid-cols-2 gap-2 pt-3">
+        <div className="grid grid-cols-3 gap-2 pt-3">
           <button
             type="button"
             id="subtab-data-btn"
@@ -544,8 +624,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <Edit className="w-4 h-4" />
-            <span>등록 자료 수정 및 삭제 ({records.length}건)</span>
+            <Edit className="w-4 h-4 shrink-0" />
+            <span className="text-[12px] w-[127.594px]">등록 자료 수정 및 삭제 ({records.length}건)</span>
           </button>
 
           <button
@@ -558,8 +638,22 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            <BarChart3 className="w-4 h-4" />
+            <BarChart3 className="w-4 h-4 shrink-0" />
             <span>기간별 / 매월 실적 분석</span>
+          </button>
+
+          <button
+            type="button"
+            id="subtab-users-btn"
+            onClick={() => setSubTab('users')}
+            className={`py-2.5 text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              subTab === 'users'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Users className="w-4 h-4 shrink-0" />
+            <span>사용자(등록자) 관리 ({usersList.length}명)</span>
           </button>
         </div>
       </div>
@@ -1242,6 +1336,222 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* SUB-TAB 3: 사용자(등록자) 관리                                 */}
+      {/* ============================================================= */}
+      {subTab === 'users' && (
+        <div className="space-y-4 animate-in fade-in-50 duration-150">
+          {userMgmtFeedback && (
+            <div
+              className={`p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2 shadow-2xs ${
+                userMgmtFeedback.type === 'error'
+                  ? 'bg-red-50 border-red-200 text-red-700'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              }`}
+            >
+              {userMgmtFeedback.type === 'error' ? (
+                <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              )}
+              <span>{userMgmtFeedback.text}</span>
+            </div>
+          )}
+
+          {/* 신규 사용자(등록자) 추가 카드 */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-blue-600" />
+                  <span>신규 사용자(등록자) 등록</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  등록된 사용자는 초기 화면에서 로그인하여 시스템을 사용할 수 있으며, 부적합 신규 등록 시 본인 이름으로 자동 지정됩니다.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shrink-0 self-start sm:self-center">
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>초기 비밀번호 자동 설정: {DEFAULT_USER_PASSWORD}</span>
+              </span>
+            </div>
+
+            <form onSubmit={handleAdminAddUser} className="flex flex-col sm:flex-row gap-2 pt-1">
+              <input
+                type="text"
+                id="admin-new-user-input"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                placeholder="신규 등록할 사용자(검사원/담당자) 성명 입력 (예: 홍길동)"
+                className="flex-1 px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600"
+              />
+              <button
+                type="submit"
+                id="admin-add-user-btn"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>사용자(등록자) 등록</span>
+              </button>
+            </form>
+          </div>
+
+          {/* 등록된 사용자 목록 및 비밀번호 관리 */}
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <span>등록된 사용자(등록자) 계정 관리</span>
+                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                    총 {usersList.length}명
+                  </span>
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  비밀번호 분실 시 [초기화({DEFAULT_USER_PASSWORD})] 버튼으로 즉시 리셋하거나 직접 변경·삭제할 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {usersList.map((u, idx) => {
+                const userRecordCount = records.filter((r) => r.registrar === u.name).length;
+                const isDefaultPwd = u.password === DEFAULT_USER_PASSWORD;
+
+                return (
+                  <div
+                    key={u.name}
+                    className="py-3.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-extrabold text-slate-700 shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-slate-900">{u.name}</span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              isDefaultPwd
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}
+                          >
+                            {isDefaultPwd
+                              ? `초기 비밀번호 (${DEFAULT_USER_PASSWORD})`
+                              : '개인 비밀번호 변경됨'}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            등록 실적: <strong className="text-slate-800">{userRecordCount}</strong>건
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          최근 변경일: {u.updatedAt || u.createdAt || '-'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 self-end sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => handleAdminResetUserPassword(u.name)}
+                        className="px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        title={`비밀번호를 초기값(${DEFAULT_USER_PASSWORD})으로 리셋`}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>초기화({DEFAULT_USER_PASSWORD})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingUserPwdTarget(u);
+                          setAdminNewUserPwd(u.password);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                        <span>비번 변경</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAdminDeleteUser(u.name)}
+                        disabled={usersList.length <= 1}
+                        className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50/70 hover:bg-red-100 text-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="사용자 삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>삭제</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Admin Direct User Password Edit */}
+      {editingUserPwdTarget && (
+        <div
+          onClick={() => setEditingUserPwdTarget(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-150 space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <KeyRound className="w-4 h-4 text-blue-600" />
+                <span>'{editingUserPwdTarget.name}' 비밀번호 지정</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingUserPwdTarget(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAdminSetUserPassword} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  새 비밀번호 (4자리 이상, 초기값: {DEFAULT_USER_PASSWORD})
+                </label>
+                <input
+                  type="text"
+                  value={adminNewUserPwd}
+                  onChange={(e) => setAdminNewUserPwd(e.target.value)}
+                  placeholder="새 비밀번호 입력"
+                  autoFocus
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingUserPwdTarget(null)}
+                  className="flex-1 py-2 border border-slate-300 text-slate-700 rounded-xl font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 cursor-pointer"
+                >
+                  저장
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

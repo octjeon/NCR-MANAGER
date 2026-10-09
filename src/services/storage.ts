@@ -664,7 +664,7 @@ export const StorageService = {
 
   saveRegistrars(list: string[]) {
     const existingUsers = this.getUsers();
-    const userMap = new Map(existingUsers.map((u) => [u.name, u]));
+    const userMap = new Map<string, AppUser>(existingUsers.map((u) => [u.name, u]));
     const today = new Date().toISOString().split('T')[0];
     const updatedUsers: AppUser[] = list
       .map((name) => name.trim())
