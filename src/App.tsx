@@ -8,6 +8,7 @@ import {
   User,
   KeyRound,
   LogOut,
+  BookOpen,
 } from 'lucide-react';
 import { NonconformityRecord } from './types';
 import { StorageService } from './services/storage';
@@ -20,6 +21,7 @@ import { RegisteredListModal } from './components/RegisteredListModal';
 import { ReportPreviewModal } from './components/ReportPreviewModal';
 import { UserLoginScreen } from './components/UserLoginScreen';
 import { UserPasswordModal } from './components/UserPasswordModal';
+import { UserManualModal } from './components/UserManualModal';
 
 export default function App() {
   // User Authentication State (Initial login screen gate)
@@ -28,6 +30,7 @@ export default function App() {
     return saved ? saved.name : null;
   });
   const [isUserPasswordModalOpen, setIsUserPasswordModalOpen] = useState(false);
+  const [isUserManualModalOpen, setIsUserManualModalOpen] = useState(false);
 
   // Navigation Tabs: 'new' (신규 등록) | 'manage' (진행 관리) | 'admin' (관리)
   const [activeTab, setActiveTab] = useState<'new' | 'manage' | 'admin'>('new');
@@ -147,6 +150,17 @@ export default function App() {
               <User className="w-3.5 h-3.5 text-blue-600" />
               <span>{currentUser}</span>
             </span>
+
+            <button
+              type="button"
+              id="open-user-manual-btn"
+              onClick={() => setIsUserManualModalOpen(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-colors cursor-pointer"
+              title="시스템 사용 매뉴얼 열람"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>매뉴얼</span>
+            </button>
 
             <button
               type="button"
@@ -306,6 +320,12 @@ export default function App() {
         userName={currentUser}
         isOpen={isUserPasswordModalOpen}
         onClose={() => setIsUserPasswordModalOpen(false)}
+      />
+
+      {/* Comprehensive In-App User Manual Modal */}
+      <UserManualModal
+        isOpen={isUserManualModalOpen}
+        onClose={() => setIsUserManualModalOpen(false)}
       />
     </div>
   );

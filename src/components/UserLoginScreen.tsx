@@ -10,10 +10,12 @@ import {
   LogIn,
   ChevronDown,
   KeyRound,
+  BookOpen,
 } from 'lucide-react';
 import { AppUser, DEFAULT_USER_PASSWORD } from '../types';
 import { StorageService } from '../services/storage';
 import { DaehanLogo } from './DaehanLogo';
+import { UserManualModal } from './UserManualModal';
 
 interface UserLoginScreenProps {
   onLoginSuccess: (userName: string, keepLoggedIn: boolean) => void;
@@ -29,6 +31,7 @@ export const UserLoginScreen: React.FC<UserLoginScreenProps> = ({ onLoginSuccess
   const [showPassword, setShowPassword] = useState(false);
   const [keepLoggedIn, setKeepLoggedIn] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
 
   // Subscribe to real-time user list updates from Firestore
   useEffect(() => {
@@ -228,9 +231,27 @@ export const UserLoginScreen: React.FC<UserLoginScreenProps> = ({ onLoginSuccess
               • 로그인 후 화면 상단 <strong>[비번 변경]</strong> 버튼에서 개인 비밀번호로 변경할 수 있습니다.
               <br />• 신규 사용자(등록자) 추가 및 관리는 로그인 후 <strong>[관리]</strong> 탭에서 관리자가 설정할 수 있습니다.
             </p>
+
+            <div className="pt-2 flex justify-center">
+              <button
+                type="button"
+                id="login-view-manual-btn"
+                onClick={() => setIsManualModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-blue-700 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 transition-all shadow-2xs cursor-pointer"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+                <span>시스템 사용 설명서 (매뉴얼) 열람</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
+
+      {/* Manual Modal */}
+      <UserManualModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+      />
     </div>
   );
 };
