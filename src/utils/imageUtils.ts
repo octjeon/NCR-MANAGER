@@ -89,3 +89,37 @@ export function compressDataUrl(
   });
 }
 
+export interface OptimizedImageResult {
+  dataUrl: string;
+  originalSize: number;
+  optimizedSize: number;
+  savedPercentage: number;
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+// Read and optimize with detailed statistics for transparency
+export async function readAndOptimizeImage(
+  file: File,
+  maxDimension: number = 800
+): Promise<OptimizedImageResult> {
+  const originalSize = file.size;
+  const dataUrl = await readFileAsDataUrl(file, maxDimension);
+  // Base64 string payload size in bytes estimation: length * 3/4
+  const optimizedSize = Math.round((dataUrl.length * 3) / 4);
+  const saved = originalSize > optimizedSize ? originalSize - optimizedSize : 0;
+  const savedPercentage = originalSize > 0 ? Math.round((saved / originalSize) * 100) : 0;
+
+  return {
+    dataUrl,
+    originalSize,
+    optimizedSize,
+    savedPercentage,
+  };
+}
+
