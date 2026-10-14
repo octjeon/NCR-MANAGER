@@ -3,7 +3,6 @@ import {
   FilePlus2,
   FolderKanban,
   ShieldCheck,
-  Cloud,
   Settings2,
   User,
   KeyRound,
@@ -122,44 +121,37 @@ export default function App() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-white border border-slate-200/90 shadow-2xs p-1 flex items-center justify-center shrink-0">
-              <DaehanLogo className="w-full h-full object-contain" />
+              <DaehanLogo className="object-contain" style={{ width: '40.1903px', height: '41.1903px' }} />
             </div>
             <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight leading-none">
-                  주식회사 대한정공
-                </h1>
-                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                  DAEHAN
-                </span>
-                {isCloudSynced && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                    <Cloud className="w-3 h-3 text-emerald-600" />
-                    클라우드 연동
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-0.5">
+              <h1 className="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight leading-none">
+                (주)대한정공
+              </h1>
+              <p className="text-[11px] sm:text-xs text-slate-600 font-semibold mt-1">
                 호선별 부적합 관리
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold">
-              <User className="w-3.5 h-3.5 text-blue-600" />
-              <span>{currentUser}</span>
+            <span
+              className="inline-flex flex-col items-center justify-center gap-0.5 px-1 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold shrink-0 text-center"
+              style={{ width: '48.8722px', height: '58.7898px' }}
+            >
+              <User className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="truncate max-w-full text-[11px] leading-tight">{currentUser}</span>
             </span>
 
             <button
               type="button"
               id="open-user-manual-btn"
               onClick={() => setIsUserManualModalOpen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-colors cursor-pointer"
+              className="inline-flex flex-col items-center justify-center gap-0.5 px-1 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition-colors cursor-pointer shrink-0 text-center"
+              style={{ width: '46.8722px', height: '57.7841px' }}
               title="시스템 사용 매뉴얼 열람"
             >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>매뉴얼</span>
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="leading-tight">매뉴얼</span>
             </button>
 
             <button

@@ -1,6 +1,6 @@
 {
   "name": "대한정공 부적합 관리 (DAEHAN)",
-  "description": "주식회사 대한정공 호선별 부적합 관리 웹앱",
+  "description": "(주)대한정공 호선별 부적합 관리 웹앱",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

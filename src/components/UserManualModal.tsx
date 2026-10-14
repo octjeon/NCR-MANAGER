@@ -77,7 +77,7 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
                 </span>
               </div>
               <p className="text-[11px] text-slate-300 mt-0.5">
-                주식회사 대한정공 호선별 부적합 관리 표준 운영 가이드
+                (주)대한정공 호선별 부적합 관리 표준 운영 가이드
               </p>
             </div>
           </div>
@@ -558,7 +558,7 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50 shrink-0">
           <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
-            주식회사 대한정공 품질경영부 (Quality Control Team)
+            (주)대한정공 품질경영부 (Quality Control Team)
           </span>
           <button
             type="button"

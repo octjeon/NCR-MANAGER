@@ -68,7 +68,7 @@ export const UserLoginScreen: React.FC<UserLoginScreenProps> = ({ onLoginSuccess
           </div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-200 text-[11px] font-bold mb-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
-            <span>주식회사 대한정공 품질관리시스템</span>
+            <span>(주)대한정공 품질관리시스템</span>
           </div>
           <h1 className="text-xl font-extrabold tracking-tight">호선별 부적합 관리</h1>
           <p className="text-xs text-slate-300 mt-1">
