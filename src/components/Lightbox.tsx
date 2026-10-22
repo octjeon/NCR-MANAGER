@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from 'lucide-react';
+import { saveImageToDevice, generatePhotoFilename } from '../utils/imageUtils';
 
 interface LightboxProps {
   images: string[];
@@ -18,6 +19,7 @@ export const Lightbox: React.FC<LightboxProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = React.useState(initialIndex);
   const [zoom, setZoom] = React.useState(1);
+  const [downloadNotice, setDownloadNotice] = React.useState(false);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
@@ -61,6 +63,14 @@ export const Lightbox: React.FC<LightboxProps> = ({
     setZoom((z) => Math.max(z - 0.5, 1));
   };
 
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const filename = generatePhotoFilename('사진원본', undefined, currentIndex);
+    saveImageToDevice(currentImage, filename);
+    setDownloadNotice(true);
+    setTimeout(() => setDownloadNotice(false), 2500);
+  };
+
   return (
     <div
       id="lightbox-backdrop"
@@ -76,8 +86,23 @@ export const Lightbox: React.FC<LightboxProps> = ({
           <span className="font-semibold text-sm tracking-wide text-slate-200">
             {title} ({currentIndex + 1} / {images.length})
           </span>
+          {downloadNotice && (
+            <span className="text-[11px] bg-emerald-600/90 text-white px-2 py-0.5 rounded-full font-bold animate-in fade-in">
+              ✓ 스마트폰에 저장 완료
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            id="lightbox-download-btn"
+            onClick={handleDownload}
+            className="p-1.5 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 text-xs font-bold transition-colors shadow-xs"
+            title="스마트폰에 사진 저장(다운로드)"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">폰에 저장</span>
+          </button>
           <button
             type="button"
             id="lightbox-zoom-out-btn"

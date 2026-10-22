@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { X, Camera, Image as ImageIcon, Check, Trash2, AlertCircle, Save } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, Check, Trash2, AlertCircle, Save, Download } from 'lucide-react';
 import { ACTION_PLAN_OPTIONS, ActionPlan, NonconformityRecord } from '../types';
-import { readFileAsDataUrl } from '../utils/imageUtils';
+import { readFileAsDataUrl, saveImageToDevice, generatePhotoFilename } from '../utils/imageUtils';
 import { PhotoSourceModal } from './PhotoSourceModal';
 
 interface StatusManagementModalProps {
@@ -80,6 +80,11 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
     if (!file) return;
 
     try {
+      // Simultaneously save taken camera photo to mobile device!
+      const targetIdx = targetSlotIndex !== null ? targetSlotIndex : completedPhotos.length;
+      const filename = generatePhotoFilename('조치완료사진', record.shipNo, targetIdx);
+      saveImageToDevice(file, filename);
+
       const dataUrl = await readFileAsDataUrl(file);
       if (targetSlotIndex !== null && targetSlotIndex < completedPhotos.length) {
         const next = [...completedPhotos];
@@ -414,17 +419,31 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
                               alt={`완료사진 ${slotIdx + 1}`}
                               className="w-full h-full object-cover"
                             />
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemovePhoto(slotIdx);
-                              }}
-                              className="absolute top-1 right-1 p-1 rounded-full bg-red-600 text-white shadow hover:bg-red-700"
-                              title="사진 삭제"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="absolute top-1 right-1 flex items-center gap-1 z-10">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const filename = generatePhotoFilename('조치완료사진', record.shipNo, slotIdx);
+                                  saveImageToDevice(photo, filename);
+                                }}
+                                className="p-1 rounded-full bg-slate-900/80 text-white shadow hover:bg-black"
+                                title="스마트폰에 사진 저장(다운로드)"
+                              >
+                                <Download className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemovePhoto(slotIdx);
+                                }}
+                                className="p-1 rounded-full bg-red-600 text-white shadow hover:bg-red-700"
+                                title="사진 삭제"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
                             <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-medium">
                               #{slotIdx + 1}
                             </span>

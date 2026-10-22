@@ -19,10 +19,16 @@ import {
   Sparkles,
   RefreshCw,
   Upload,
+  Download,
 } from 'lucide-react';
 import { NonconformityRecord, ActionPlan } from '../types';
 import { StorageService } from '../services/storage';
-import { readAndOptimizeImage, formatBytes } from '../utils/imageUtils';
+import {
+  readAndOptimizeImage,
+  formatBytes,
+  saveImageToDevice,
+  generatePhotoFilename,
+} from '../utils/imageUtils';
 import { Lightbox } from './Lightbox';
 import { PhotoSourceModal } from './PhotoSourceModal';
 
@@ -254,6 +260,16 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
   const handleCameraChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Simultaneously save taken camera photo to device!
+    const catLabel = activePhotoCategory === 'evidence' ? '증거사진' : '조치완료사진';
+    const currentLen = activePhotoCategory === 'evidence' ? evidencePhotos.length : completedPhotos.length;
+    const slotNum = targetSlotIndex !== null ? targetSlotIndex : currentLen;
+    const filename = generatePhotoFilename(catLabel, shipNo, slotNum);
+    saveImageToDevice(file, filename);
+
+    showToast(`📸 촬영된 사진이 핸드폰에 동시 저장되었습니다. (${catLabel})`, 'success');
+
     await processImageFiles([file]);
   };
 
@@ -654,6 +670,18 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                       </button>
                       <button
                         type="button"
+                        onClick={() => {
+                          const filename = generatePhotoFilename('증거사진', shipNo, idx);
+                          saveImageToDevice(photo, filename);
+                          showToast(`사진 #${idx + 1}이(가) 스마트폰에 저장되었습니다.`, 'success');
+                        }}
+                        className="p-1.5 rounded-lg bg-slate-900/90 hover:bg-black text-white shadow cursor-pointer transition-transform hover:scale-110"
+                        title="스마트폰에 사진 저장(다운로드)"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDeleteEvidencePhoto(idx)}
                         className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white shadow cursor-pointer transition-transform hover:scale-110"
                         title="이 사진 삭제"
@@ -929,6 +957,18 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
                         title="크게 확대보기"
                       >
                         <ZoomIn className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const filename = generatePhotoFilename('조치완료사진', shipNo, idx);
+                          saveImageToDevice(photo, filename);
+                          showToast(`완료사진 #${idx + 1}이(가) 스마트폰에 저장되었습니다.`, 'success');
+                        }}
+                        className="p-1.5 rounded-lg bg-slate-900/90 hover:bg-black text-white shadow cursor-pointer transition-transform hover:scale-110"
+                        title="스마트폰에 사진 저장(다운로드)"
+                      >
+                        <Download className="w-4 h-4" />
                       </button>
                       <button
                         type="button"

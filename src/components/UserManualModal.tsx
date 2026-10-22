@@ -328,13 +328,16 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
                   </span>
                   <ul className="list-disc list-inside space-y-1 mt-1 text-slate-600 pl-1">
                     <li>
-                      <strong>카메라 직접 촬영</strong>: 현장에서 스마트폰 카메라를 즉시 구동하여 사진을 촬영합니다.
+                      <strong>카메라 직접 촬영 & 스마트폰 동시 저장</strong>: 현장에서 카메라로 증거사진을 촬영하면 웹앱에 즉시 등록되는 동시에 <strong>검사원의 스마트폰 갤러리/다운로드 폴더에도 사진이 자동 저장</strong>되어 현장 데이터를 안전하게 보관합니다.
                     </li>
                     <li>
                       <strong>갤러리 선택</strong>: 기기 사진첩에서 1장 또는 여러 장을 동시에 선택하여 일괄 첨부합니다.
                     </li>
                     <li>
                       <strong>실시간 자동 최적화</strong>: 첨부 즉시 시스템이 화질 저하 없이 해상도를 800px로 조절하고 95% 이상 용량을 자동 압축하여 저장합니다.
+                    </li>
+                    <li>
+                      <strong>개별 사진 폰 저장(다운로드)</strong>: 등록된 사진 카드의 다운로드 아이콘이나 사진 확대(라이트박스) 창의 <strong>[폰에 저장]</strong> 버튼을 통해 언제든지 스마트폰으로 재다운로드할 수 있습니다.
                     </li>
                     <li>
                       <strong>등록 완료</strong>: <code>[💾 부적합 등록 완료]</code>를 누르면 중복 없는 신규 고유번호(<code>DHQ-0001</code>, <code>DHQ-0002</code>...)가 순차 발급됩니다.
@@ -548,6 +551,16 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
                   </span>
                   <p className="text-slate-600">
                     A. 스마트폰 브라우저 설정에서 카메라 권한이 '차단'되어 있는지 확인하시고 '허용'으로 변경해 주십시오. 갤러리 선택을 통해서도 기기 카메라로 찍어둔 사진을 즉시 올릴 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 space-y-1">
+                  <span className="font-bold text-blue-900 flex items-center gap-1.5">
+                    <span>Q4. 증거사진 촬영 시 스마트폰(핸드폰)에도 사진이 저장되나요?</span>
+                    <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-bold">동시 저장</span>
+                  </span>
+                  <p className="text-slate-600">
+                    A. <strong>네, 촬영과 동시에 핸드폰에도 자동 저장됩니다!</strong> [카메라 직접 촬영]으로 증거사진을 찍으면 웹앱에 등록됨과 동시에 스마트폰의 다운로드/갤러리 폴더에 원본 사진이 자동 보관됩니다. 또한 등록된 사진 카드 우측 상단의 다운로드 버튼이나 라이트박스 확대 창의 <strong>[폰에 저장]</strong> 버튼을 누르면 언제든지 스마트폰으로 바로 저장할 수 있습니다.
                   </p>
                 </div>
               </div>

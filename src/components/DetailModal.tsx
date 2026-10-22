@@ -15,12 +15,14 @@ import {
   AlertTriangle,
   Loader2,
   MapPin,
+  Download,
 } from 'lucide-react';
 import { NonconformityRecord } from '../types';
 import { StatusManagementModal } from './StatusManagementModal';
 import { EmailConfirmModal } from './EmailConfirmModal';
 import { Lightbox } from './Lightbox';
 import { generateAndDownloadPDF } from '../utils/pdfGenerator';
+import { saveImageToDevice, generatePhotoFilename } from '../utils/imageUtils';
 import { ReportPDFView } from './ReportPDFView';
 import { ReportPreviewModal } from './ReportPreviewModal';
 
@@ -258,6 +260,18 @@ export const DetailModal: React.FC<DetailModalProps> = ({
                           확대보기
                         </span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const filename = generatePhotoFilename('증거사진', record.shipNo, idx);
+                          saveImageToDevice(photo, filename);
+                        }}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-full bg-slate-900/80 hover:bg-black text-white shadow opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        title="스마트폰에 사진 저장"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
                       <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px]">
                         사진 {idx + 1}
                       </span>
@@ -331,6 +345,18 @@ export const DetailModal: React.FC<DetailModalProps> = ({
                             alt={`완료사진 ${idx + 1}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const filename = generatePhotoFilename('조치완료사진', record.shipNo, idx);
+                              saveImageToDevice(photo, filename);
+                            }}
+                            className="absolute top-1.5 right-1.5 p-1 rounded-full bg-slate-900/80 hover:bg-black text-white shadow opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            title="스마트폰에 사진 저장"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
                           <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-emerald-800/80 text-white text-[9px]">
                             조치완료 {idx + 1}
                           </span>

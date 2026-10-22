@@ -71,12 +71,12 @@ export const PhotoSourceModal: React.FC<PhotoSourceModalProps> = ({
                 <span className="font-bold text-sm text-slate-900 group-hover:text-blue-700">
                   카메라로 직접 촬영
                 </span>
-                <span className="text-[10px] font-semibold text-blue-600 bg-blue-100/70 px-2 py-0.5 rounded">
-                  즉시 촬영
+                <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded flex items-center gap-1">
+                  📸 촬영+폰동시저장
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                현장 기기 카메라를 실행하여 사진을 즉시 촬영합니다.
+                현장 카메라로 사진을 촬영하며, 스마트폰 사진첩에도 동시 자동 보관됩니다.
               </p>
             </div>
           </button>

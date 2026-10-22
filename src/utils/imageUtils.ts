@@ -123,3 +123,69 @@ export async function readAndOptimizeImage(
   };
 }
 
+/**
+ * Generate standardized filename for quality photos (e.g., 대한정공_증거사진_2401호선_20261022_123045_사진1.jpg)
+ */
+export function generatePhotoFilename(
+  prefix: string = '증거사진',
+  shipNo?: string,
+  slotIdx?: number
+): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const shipPart = shipNo && shipNo.trim() ? `${shipNo.trim()}호선_` : '';
+  const slotPart = typeof slotIdx === 'number' ? `_사진${slotIdx + 1}` : '';
+  return `대한정공_${prefix}_${shipPart}${yyyy}${mm}${dd}_${hh}${min}${ss}${slotPart}.jpg`;
+}
+
+/**
+ * Saves/downloads an image file or base64 data URL directly to the user's mobile device or PC.
+ * On mobile smartphones (Android / iOS), this triggers saving to the device's Downloads/Gallery folder.
+ */
+export function saveImageToDevice(
+  fileOrDataUrl: File | Blob | string,
+  suggestedFilename?: string
+): boolean {
+  try {
+    let url: string;
+    let isObjectUrl = false;
+
+    if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
+      url = URL.createObjectURL(fileOrDataUrl);
+      isObjectUrl = true;
+    } else {
+      url = fileOrDataUrl;
+    }
+
+    const filename = suggestedFilename || generatePhotoFilename();
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    link.target = '_blank';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(() => {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+      if (isObjectUrl) {
+        URL.revokeObjectURL(url);
+      }
+    }, 2000);
+
+    return true;
+  } catch (err) {
+    console.error('Failed to save image to device:', err);
+    return false;
+  }
+}
+

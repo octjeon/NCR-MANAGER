@@ -19,10 +19,16 @@ import {
   MapPin,
   ChevronDown,
   Layers,
+  Download,
+  Smartphone,
 } from 'lucide-react';
 import { NonconformityRecord } from '../types';
 import { StorageService } from '../services/storage';
-import { readFileAsDataUrl } from '../utils/imageUtils';
+import {
+  readFileAsDataUrl,
+  saveImageToDevice,
+  generatePhotoFilename,
+} from '../utils/imageUtils';
 import { PhotoSourceModal } from './PhotoSourceModal';
 
 interface NewRegistrationTabProps {
@@ -121,6 +127,26 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const [targetPhotoSlot, setTargetPhotoSlot] = useState<number | null>(null);
   const [showPhotoSourceModal, setShowPhotoSourceModal] = useState(false);
+
+  // Auto-save taken photos simultaneously to mobile phone device storage
+  const [autoSaveToDevice, setAutoSaveToDevice] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('daehan_autosave_photos_to_device');
+      return saved !== null ? saved === 'true' : true; // Default: Enabled
+    } catch {
+      return true;
+    }
+  });
+  const [savedToast, setSavedToast] = useState<string | null>(null);
+
+  const handleToggleAutoSave = (enabled: boolean) => {
+    setAutoSaveToDevice(enabled);
+    try {
+      localStorage.setItem('daehan_autosave_photos_to_device', String(enabled));
+    } catch {
+      // ignore
+    }
+  };
 
   // Step 1 Validation
   const validateStep1 = (): boolean => {
@@ -264,6 +290,16 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     if (!file) return;
 
     try {
+      const targetIdx = targetPhotoSlot !== null ? targetPhotoSlot : photos.length;
+
+      // Simultaneously save taken photo to the user's mobile phone/device!
+      if (autoSaveToDevice) {
+        const filename = generatePhotoFilename('증거사진', shipNo, targetIdx);
+        saveImageToDevice(file, filename);
+        setSavedToast(`📸 촬영된 사진이 핸드폰(다운로드/갤러리)에 자동 저장되었습니다.`);
+        setTimeout(() => setSavedToast(null), 4000);
+      }
+
       const dataUrl = await readFileAsDataUrl(file);
       if (targetPhotoSlot !== null && targetPhotoSlot < photos.length) {
         const next = [...photos];
@@ -280,6 +316,15 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
       if (cameraInputRef.current) cameraInputRef.current.value = '';
       setTargetPhotoSlot(null);
     }
+  };
+
+  const handleSaveSlotPhotoToPhone = (slotIdx: number) => {
+    const photo = photos[slotIdx];
+    if (!photo) return;
+    const filename = generatePhotoFilename('증거사진', shipNo, slotIdx);
+    saveImageToDevice(photo, filename);
+    setSavedToast(`💾 사진 #${slotIdx + 1}이(가) 스마트폰(기기)에 저장되었습니다.`);
+    setTimeout(() => setSavedToast(null), 3500);
   };
 
   const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -778,6 +823,43 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
               <span className="text-xs font-bold text-blue-600">{photos.length} / 4장</span>
             </div>
 
+            {/* Simultaneous Device Save Toggle Card */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/90 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>촬영 시 핸드폰(기기)에도 동시 저장</span>
+                    <span className="text-[10px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded-full">
+                      자동 저장
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    카메라 촬영 시 스마트폰 다운로드/갤러리 폴더에 원본 사진이 동시 보관됩니다.
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
+                <input
+                  type="checkbox"
+                  checked={autoSaveToDevice}
+                  onChange={(e) => handleToggleAutoSave(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            {/* Saved to Device Notice Toast */}
+            {savedToast && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-semibold flex items-center gap-2 shadow-2xs animate-in fade-in duration-150">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="flex-1">{savedToast}</span>
+              </div>
+            )}
+
             {/* Quick Action Selection Buttons: Camera & Gallery */}
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -815,17 +897,31 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                           alt={`증거사진 ${slotIdx + 1}`}
                           className="w-full h-full object-cover"
                         />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemovePhoto(slotIdx);
-                          }}
-                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-red-600 text-white shadow-md hover:bg-red-700 transition-transform active:scale-95"
-                          title="사진 삭제"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Action buttons on thumbnail: Download to Phone & Delete */}
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-10">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveSlotPhotoToPhone(slotIdx);
+                            }}
+                            className="p-1 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white shadow-md transition-transform active:scale-95"
+                            title="핸드폰에 사진 저장(다운로드)"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemovePhoto(slotIdx);
+                            }}
+                            className="p-1 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-md transition-transform active:scale-95"
+                            title="사진 삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                         <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium">
                           사진 #{slotIdx + 1}
                         </span>
@@ -868,8 +964,13 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
               className="hidden"
             />
 
-            <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-blue-900 leading-relaxed">
-              💡 <strong>카메라 직접 촬영</strong>으로 현장 사진을 즉시 찍거나, <strong>갤러리에서 선택</strong>하여 앨범에 보관된 사진을 편리하게 등록할 수 있습니다.
+            <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-blue-900 leading-relaxed space-y-1">
+              <div>
+                💡 <strong>카메라 직접 촬영</strong> 시 현장 사진이 즉시 앱에 등록되며, 동시에 스마트폰의 <strong>사진 앨범/다운로드 폴더에도 자동 저장</strong>되어 현장 데이터를 분실 없이 보관할 수 있습니다.
+              </div>
+              <div className="text-[11px] text-blue-700">
+                * 각 사진 우측 상단의 <Download className="w-3 h-3 inline-block mx-0.5" /> 버튼을 누르면 언제든지 스마트폰에 다시 내려받을 수 있습니다.
+              </div>
             </div>
           </div>
         )}
