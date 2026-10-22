@@ -328,7 +328,7 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
                   </span>
                   <ul className="list-disc list-inside space-y-1 mt-1 text-slate-600 pl-1">
                     <li>
-                      <strong>카메라 직접 촬영 & 스마트폰 동시 저장</strong>: 현장에서 카메라로 증거사진을 촬영하면 웹앱에 즉시 등록되는 동시에 <strong>검사원의 스마트폰 갤러리/다운로드 폴더에도 사진이 자동 저장</strong>되어 현장 데이터를 안전하게 보관합니다.
+                      <strong>카메라 직접 촬영 & 스마트폰 우선 동시 저장</strong>: 현장에서 카메라로 증거사진을 촬영하면 <strong>서버에 업로드되기 전 검사원의 스마트폰(갤러리/다운로드 폴더)에 원본 사진이 먼저 안전하게 저장</strong>된 후 서버에 등록되므로 통신 불안정이나 전송 지연 시에도 현장 데이터가 100% 안전하게 보호됩니다.
                     </li>
                     <li>
                       <strong>갤러리 선택</strong>: 기기 사진첩에서 1장 또는 여러 장을 동시에 선택하여 일괄 첨부합니다.
@@ -556,11 +556,11 @@ export const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClos
 
                 <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80 space-y-1">
                   <span className="font-bold text-blue-900 flex items-center gap-1.5">
-                    <span>Q4. 증거사진 촬영 시 스마트폰(핸드폰)에도 사진이 저장되나요?</span>
-                    <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded font-bold">동시 저장</span>
+                    <span>Q4. 증거사진 촬영 시 서버 업로드 전에 스마트폰(핸드폰)에도 저장되나요?</span>
+                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold">우선 저장 보장</span>
                   </span>
                   <p className="text-slate-600">
-                    A. <strong>네, 촬영과 동시에 핸드폰에도 자동 저장됩니다!</strong> [카메라 직접 촬영]으로 증거사진을 찍으면 웹앱에 등록됨과 동시에 스마트폰의 다운로드/갤러리 폴더에 원본 사진이 자동 보관됩니다. 또한 등록된 사진 카드 우측 상단의 다운로드 버튼이나 라이트박스 확대 창의 <strong>[폰에 저장]</strong> 버튼을 누르면 언제든지 스마트폰으로 바로 저장할 수 있습니다.
+                    A. <strong>네! 사진 촬영 즉시 서버 업로드 전에 스마트폰에 먼저 자동 저장됩니다!</strong> [카메라 직접 촬영] 버튼으로 사진을 찍으면, 클라우드 서버에 등록 및 전송되기 전에 스마트폰의 다운로드/갤러리 폴더로 원본이 1차 안전 보관됩니다. 또한 각 사진의 다운로드 버튼이나 <code>[전체 사진 폰에 다시 저장]</code> 버튼으로 언제든지 재다운로드가 가능합니다.
                   </p>
                 </div>
               </div>

@@ -144,8 +144,25 @@ export function generatePhotoFilename(
 }
 
 /**
+ * Converts base64 data URL to a binary Blob
+ */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(',');
+  const mimeMatch = parts[0]?.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const byteString = atob(parts[1] || '');
+  const arrayBuffer = new ArrayBuffer(byteString.length);
+  const uint8Array = new Uint8Array(arrayBuffer);
+  for (let i = 0; i < byteString.length; i++) {
+    uint8Array[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([uint8Array], { type: mime });
+}
+
+/**
  * Saves/downloads an image file or base64 data URL directly to the user's mobile device or PC.
  * On mobile smartphones (Android / iOS), this triggers saving to the device's Downloads/Gallery folder.
+ * Executed BEFORE uploading/submitting to the remote server to guarantee local photo persistence.
  */
 export function saveImageToDevice(
   fileOrDataUrl: File | Blob | string,
@@ -153,13 +170,17 @@ export function saveImageToDevice(
 ): boolean {
   try {
     let url: string;
-    let isObjectUrl = false;
+    let isCreatedUrl = false;
 
     if (fileOrDataUrl instanceof File || fileOrDataUrl instanceof Blob) {
       url = URL.createObjectURL(fileOrDataUrl);
-      isObjectUrl = true;
+      isCreatedUrl = true;
+    } else if (typeof fileOrDataUrl === 'string' && fileOrDataUrl.startsWith('data:')) {
+      const blob = dataUrlToBlob(fileOrDataUrl);
+      url = URL.createObjectURL(blob);
+      isCreatedUrl = true;
     } else {
-      url = fileOrDataUrl;
+      url = String(fileOrDataUrl);
     }
 
     const filename = suggestedFilename || generatePhotoFilename();
@@ -167,8 +188,6 @@ export function saveImageToDevice(
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
-    link.rel = 'noopener';
-    link.target = '_blank';
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
@@ -177,15 +196,31 @@ export function saveImageToDevice(
       if (document.body.contains(link)) {
         document.body.removeChild(link);
       }
-      if (isObjectUrl) {
+      if (isCreatedUrl) {
         URL.revokeObjectURL(url);
       }
-    }, 2000);
+    }, 2500);
 
     return true;
   } catch (err) {
     console.error('Failed to save image to device:', err);
     return false;
   }
+}
+
+/**
+ * Batch saves multiple images to the device with a slight stagger
+ */
+export function saveMultipleImagesToDevice(
+  images: (File | Blob | string)[],
+  suggestedPrefix: string = '증거사진',
+  shipNo?: string
+): void {
+  images.forEach((img, index) => {
+    setTimeout(() => {
+      const filename = generatePhotoFilename(suggestedPrefix, shipNo, index);
+      saveImageToDevice(img, filename);
+    }, index * 280);
+  });
 }
 

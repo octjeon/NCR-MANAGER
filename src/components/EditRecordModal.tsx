@@ -261,15 +261,16 @@ export const EditRecordModal: React.FC<EditRecordModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Simultaneously save taken camera photo to device!
+    // [1단계: 서버 업로드 전 스마트폰 기기 즉시 보관]
     const catLabel = activePhotoCategory === 'evidence' ? '증거사진' : '조치완료사진';
     const currentLen = activePhotoCategory === 'evidence' ? evidencePhotos.length : completedPhotos.length;
     const slotNum = targetSlotIndex !== null ? targetSlotIndex : currentLen;
     const filename = generatePhotoFilename(catLabel, shipNo, slotNum);
     saveImageToDevice(file, filename);
 
-    showToast(`📸 촬영된 사진이 핸드폰에 동시 저장되었습니다. (${catLabel})`, 'success');
+    showToast(`📸 [1단계 완료] 촬영 사진이 스마트폰에 먼저 안전하게 저장되었습니다. (${catLabel})`, 'success');
 
+    // [2단계: 이미지 최적화 후 상태 및 서버 동기화]
     await processImageFiles([file]);
   };
 

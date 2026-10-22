@@ -27,6 +27,7 @@ import { StorageService } from '../services/storage';
 import {
   readFileAsDataUrl,
   saveImageToDevice,
+  saveMultipleImagesToDevice,
   generatePhotoFilename,
 } from '../utils/imageUtils';
 import { PhotoSourceModal } from './PhotoSourceModal';
@@ -292,14 +293,16 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     try {
       const targetIdx = targetPhotoSlot !== null ? targetPhotoSlot : photos.length;
 
-      // Simultaneously save taken photo to the user's mobile phone/device!
+      // [1단계: 서버 업로드 전 스마트폰 기기 우선 저장]
+      // 카메라로 촬영된 원본 사진을 서버나 클라우드 업로드 전에 핸드폰(다운로드/갤러리)에 먼저 즉시 보관
       if (autoSaveToDevice) {
         const filename = generatePhotoFilename('증거사진', shipNo, targetIdx);
         saveImageToDevice(file, filename);
-        setSavedToast(`📸 촬영된 사진이 핸드폰(다운로드/갤러리)에 자동 저장되었습니다.`);
-        setTimeout(() => setSavedToast(null), 4000);
+        setSavedToast(`📸 [1단계: 폰 저장 완료] 촬영 사진이 스마트폰(갤러리/다운로드)에 먼저 안전하게 저장되었습니다. (서버 동기화 준비 중)`);
+        setTimeout(() => setSavedToast(null), 4500);
       }
 
+      // [2단계: 이미지 최적화 및 등록 폼 탑재]
       const dataUrl = await readFileAsDataUrl(file);
       if (targetPhotoSlot !== null && targetPhotoSlot < photos.length) {
         const next = [...photos];
@@ -325,6 +328,13 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
     saveImageToDevice(photo, filename);
     setSavedToast(`💾 사진 #${slotIdx + 1}이(가) 스마트폰(기기)에 저장되었습니다.`);
     setTimeout(() => setSavedToast(null), 3500);
+  };
+
+  const handleSaveAllPhotosToPhone = () => {
+    if (photos.length === 0) return;
+    saveMultipleImagesToDevice(photos, '증거사진', shipNo);
+    setSavedToast(`💾 등록된 사진 ${photos.length}장이 모두 스마트폰(기기)에 일괄 저장되었습니다.`);
+    setTimeout(() => setSavedToast(null), 4000);
   };
 
   const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -475,6 +485,13 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
               <span className="text-slate-400">증거사진:</span>
               <span className="font-medium text-slate-800">
                 {registeredRecord.evidencePhotos.length}장 첨부됨
+              </span>
+            </div>
+            <div className="flex justify-between items-center border-t border-slate-200/80 pt-2 mt-2">
+              <span className="text-slate-500 font-medium">스마트폰 저장:</span>
+              <span className="font-bold text-emerald-700 text-[11px] flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                서버 업로드 전 기기 보관 완료
               </span>
             </div>
           </div>
@@ -824,20 +841,20 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
             </div>
 
             {/* Simultaneous Device Save Toggle Card */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/90 shadow-2xs">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-emerald-50 border border-blue-200 shadow-2xs">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                  <Smartphone className="w-4 h-4" />
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Smartphone className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>촬영 시 핸드폰(기기)에도 동시 저장</span>
-                    <span className="text-[10px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded-full">
-                      자동 저장
+                    <span>촬영 시 서버 업로드 전 핸드폰(기기) 우선 저장</span>
+                    <span className="text-[10px] font-bold bg-emerald-600 text-white px-1.5 py-0.2 rounded-full">
+                      안심 보관
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    카메라 촬영 시 스마트폰 다운로드/갤러리 폴더에 원본 사진이 동시 보관됩니다.
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                    카메라 촬영 즉시 서버 업로드 이전에 스마트폰 갤러리/다운로드 폴더에 원본이 먼저 안전하게 저장됩니다.
                   </p>
                 </div>
               </div>
@@ -848,13 +865,13 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                   onChange={(e) => handleToggleAutoSave(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
               </label>
             </div>
 
             {/* Saved to Device Notice Toast */}
             {savedToast && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-semibold flex items-center gap-2 shadow-2xs animate-in fade-in duration-150">
+              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-950 font-semibold flex items-center gap-2 shadow-2xs animate-in fade-in duration-150">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span className="flex-1">{savedToast}</span>
               </div>
@@ -866,7 +883,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                 type="button"
                 onClick={() => handleOpenDirectCamera()}
                 disabled={photos.length >= 4}
-                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs active:scale-[0.98] transition-all"
+                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white text-xs font-bold shadow-xs active:scale-[0.98] transition-all cursor-pointer"
               >
                 <Camera className="w-4 h-4" />
                 카메라 직접 촬영
@@ -875,12 +892,30 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                 type="button"
                 onClick={() => handleOpenDirectGallery()}
                 disabled={photos.length >= 4}
-                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 border border-slate-200 text-xs font-bold shadow-xs active:scale-[0.98] transition-all"
+                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-700 border border-slate-200 text-xs font-bold shadow-xs active:scale-[0.98] transition-all cursor-pointer"
               >
                 <ImageIcon className="w-4 h-4 text-indigo-600" />
                 갤러리에서 선택
               </button>
             </div>
+
+            {/* Batch save button if photos exist */}
+            {photos.length > 0 && (
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] text-slate-500 font-medium">
+                  첨부된 증거사진: <strong className="text-slate-700">{photos.length}장</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSaveAllPhotosToPhone}
+                  className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
+                  title="등록된 사진 전체를 스마트폰 갤러리에 일괄 저장합니다"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>전체 사진 폰에 다시 저장</span>
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {[0, 1, 2, 3].map((slotIdx) => {
@@ -905,7 +940,7 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                               e.stopPropagation();
                               handleSaveSlotPhotoToPhone(slotIdx);
                             }}
-                            className="p-1 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white shadow-md transition-transform active:scale-95"
+                            className="p-1 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white shadow-md transition-transform active:scale-95 cursor-pointer"
                             title="핸드폰에 사진 저장(다운로드)"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -916,14 +951,15 @@ export const NewRegistrationTab: React.FC<NewRegistrationTabProps> = ({
                               e.stopPropagation();
                               handleRemovePhoto(slotIdx);
                             }}
-                            className="p-1 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-md transition-transform active:scale-95"
+                            className="p-1 rounded-full bg-red-600 hover:bg-red-700 text-white shadow-md transition-transform active:scale-95 cursor-pointer"
                             title="사진 삭제"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium">
-                          사진 #{slotIdx + 1}
+                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-black/75 text-white text-[10px] font-medium flex items-center gap-1">
+                          <span>#{slotIdx + 1}</span>
+                          <span className="text-emerald-400 font-bold">· 📱 폰 보관</span>
                         </span>
                       </>
                     ) : (

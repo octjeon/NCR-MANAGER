@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Camera, Image as ImageIcon, Check, Trash2, AlertCircle, Save, Download } from 'lucide-react';
+import { X, Camera, Image as ImageIcon, Check, Trash2, AlertCircle, Save, Download, CheckCircle2 } from 'lucide-react';
 import { ACTION_PLAN_OPTIONS, ActionPlan, NonconformityRecord } from '../types';
 import { readFileAsDataUrl, saveImageToDevice, generatePhotoFilename } from '../utils/imageUtils';
 import { PhotoSourceModal } from './PhotoSourceModal';
@@ -37,6 +37,7 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
   const [specialNotes, setSpecialNotes] = useState(record.specialNotes || '');
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [savedToast, setSavedToast] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const [targetSlotIndex, setTargetSlotIndex] = useState<number | null>(null);
@@ -80,11 +81,15 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
     if (!file) return;
 
     try {
-      // Simultaneously save taken camera photo to mobile device!
+      // [1단계: 서버 업로드 전 스마트폰 기기 즉시 보관]
       const targetIdx = targetSlotIndex !== null ? targetSlotIndex : completedPhotos.length;
       const filename = generatePhotoFilename('조치완료사진', record.shipNo, targetIdx);
       saveImageToDevice(file, filename);
 
+      setSavedToast(`📸 [1단계 완료] 촬영 사진이 스마트폰에 먼저 안전하게 저장되었습니다. (서버 동기화 준비 중)`);
+      setTimeout(() => setSavedToast(null), 4000);
+
+      // [2단계: 최적화 및 폼 상태 적재]
       const dataUrl = await readFileAsDataUrl(file);
       if (targetSlotIndex !== null && targetSlotIndex < completedPhotos.length) {
         const next = [...completedPhotos];
@@ -223,6 +228,13 @@ export const StatusManagementModal: React.FC<StatusManagementModalProps> = ({
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
               <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {savedToast && (
+            <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs text-emerald-950 font-semibold flex items-center gap-2 shadow-2xs animate-in fade-in duration-150">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="flex-1">{savedToast}</span>
             </div>
           )}
 
